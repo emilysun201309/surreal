@@ -1,8 +1,16 @@
+
 import ast
-import configparser
+#import configparser
+try:
+    import configparser
+except:
+    from six.moves import configparser
 import pdb
 import numpy as np
 import random
+
+
+
 
 def load_file(filename='config', section='SYNTH_DATA'):
 	# returns dictionary with all params

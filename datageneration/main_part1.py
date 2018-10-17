@@ -267,6 +267,8 @@ def init_scene(scene, params, gender='female'):
     return(ob, obname, arm_ob, cam_ob)
 
 # transformation between pose and blendshapes
+#Emily:
+# create rotation matrix from pose
 def rodrigues2bshapes(pose):
     rod_rots = np.asarray(pose).reshape(24, 3)
     mat_rots = [Rodrigues(rod_rot) for rod_rot in rod_rots]
@@ -274,7 +276,7 @@ def rodrigues2bshapes(pose):
                               for mat_rot in mat_rots[1:]])
     return(mat_rots, bshapes)
 
-
+#Emily: this function handles poses
 # apply trans pose and shape to character
 def apply_trans_pose_shape(trans, pose, shape, ob, arm_ob, obname, scene, cam_ob, frame=None):
     # transform pose into rotation matrices (for pose) and pose blendshapes
