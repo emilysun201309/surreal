@@ -65,8 +65,8 @@ if __name__ == '__main__':
     idx_info = load(open("pkl/idx_info.pickle", 'rb'))
 
     # get runpass
-    (runpass, idx) = divmod(idx, len(idx_info))
-
+    #(runpass, idx) = divmod(idx, len(idx_info))
+    runpass = idx
     log_message("start part 2")
     
     import hashlib
@@ -107,12 +107,14 @@ if __name__ == '__main__':
     smpl_data = np.load(join(smpl_data_folder, smpl_data_filename))
     cmu_parms, name = load_body_data(smpl_data, idx)
 
-    tmp_path = join(tmp_path, 'run%d_%s_c%04d' % (runpass, name.replace(" ", ""), (ishape + 1)))
+    #tmp_path = join(tmp_path, 'run%d_%s_c%04d' % (runpass, name.replace(" ", ""), (ishape + 1)))
+    tmp_path = join(tmp_path, 'run%d' % (runpass))
     res_paths = {k:join(tmp_path, '%05d_%s'%(idx, k)) for k in output_types if output_types[k]}
 
     data = cmu_parms[name]
     nframes = len(data['poses'][::stepsize])
-    output_path = join(output_path, 'run%d' % runpass, name.replace(" ", ""))
+    #output_path = join(output_path, 'run%d' % runpass, name.replace(" ", ""))
+    output_path = join(output_path, 'run%d' % runpass)
     
     # .mat files
     matfile_normal = join(output_path, name.replace(" ", "") + "_c%04d_normal.mat" % (ishape + 1))
