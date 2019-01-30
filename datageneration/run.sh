@@ -1,12 +1,14 @@
 #!/bin/bash
 
 JOB_PARAMS=${1:-'--idx 3 --ishape 0 --stride 50'} # defaults to [2, 0, 50]
+#USER_DIR=/home/emily/SURREAL/create_environment
+USER_DIR=$1
 
 # SET PATHS HERE
 FFMPEG_PATH=/usr/bin/ffmpeg
 X264_PATH=/usr/include
-PYTHON2_PATH=/usr # PYTHON 2
-BLENDER_PATH=/home/emily/SURREAL/blender-2.78a-linux-glibc211-x86_64
+PYTHON2_PATH=$USER_DIR/venv2 # PYTHON 2
+BLENDER_PATH=$USER_DIR/blender-2.78-linux-glibc219-x86_64
 #cd surreal/datageneration
 
 # BUNLED PYTHON
