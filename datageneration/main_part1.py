@@ -895,7 +895,7 @@ def main():
     bpy.ops.wm.save_as_mainfile(filepath=join(tmp_path, 'pre.blend'))
     
     # save RGB data with ffmpeg (if you don't have h264 codec, you can replace with another one and control the quality with something like -q:v 3)
-    cmd_ffmpeg = 'ffmpeg -y -r 30 -i ''%s'' -c:v h264 -pix_fmt yuv420p -crf 23 ''%s_c%04d.mp4''' % (join(rgb_path, 'Image%04d.png'), join(output_path, idx, (ishape + 1)))
+    cmd_ffmpeg = 'ffmpeg -y -r 30 -i ''%s'' -c:v h264 -pix_fmt yuv420p -crf 23 ''%s_c%04d.mp4''' % (join(rgb_path, 'Image%04d.png'), join(output_path, str(idx), (ishape + 1)))
     log_message("Generating RGB video (%s)" % cmd_ffmpeg)
     os.system(cmd_ffmpeg)
     
