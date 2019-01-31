@@ -1,0 +1,18 @@
+[SYNTH_DATA]
+tmp_path           = '/home/emily/SURREAL/git_copy/surreal//temp'
+output_path        = '/home/emily/SURREAL/git_copy/surreal//out' 
+bg_path            = '/home/emily/SURREAL/git_copy/surreal//LSUN/'
+openexr_py2_path   = "/home/emily/SURREAL/git_copy/surreal//venv/lib/python2.7/dist-packages/OpenEXR-1.3.2-py2.7-linux-x86_64.egg"
+output_types       = {'depth':True, 'fg':False, 'gtflow':False, 'normal':False, 'segm':True, 'vblur':False}
+
+smpl_data_folder   = 'smpl_data'
+smpl_data_filename = 'smpl_data.npz'
+clothing_option    = 'all' # grey, nongrey or all
+
+resy     = 320  # width
+resx     = 240  # height
+stepsize = 4    # subsampling MoCap sequence by selecting every 4th frame
+stride   = 50   # percent overlap between clips 
+clipsize = 100  # nFrames in each clip, where the random parameters are fixed
+
+
