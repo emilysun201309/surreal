@@ -104,23 +104,29 @@ if __name__ == '__main__':
     import Imath
     
     log_message("Loading SMPL data")
-    smpl_data = np.load(join(smpl_data_folder, smpl_data_filename))
-    cmu_parms, name = load_body_data(smpl_data, idx)
+    #smpl_data = np.load(join(smpl_data_folder, smpl_data_filename))
+    #cmu_parms, name = load_body_data(smpl_data, idx)
 
     #tmp_path = join(tmp_path, 'run%d_%s_c%04d' % (runpass, name.replace(" ", ""), (ishape + 1)))
     tmp_path = join(tmp_path, 'run%d' % (runpass))
     res_paths = {k:join(tmp_path, '%05d_%s'%(idx, k)) for k in output_types if output_types[k]}
 
-    data = cmu_parms[name]
-    nframes = len(data['poses'][::stepsize])
+    #load data from KIT
+    #data = cmu_parms[name]
+    poses = np.load(smpl_data_folder + '/KIT/%d.npy'%idx)
+    poses = poses[::3]
+    trans = np.load(smpl_data_folder+'/KIT/%d_root_pos.npy'%idx)
+    trans = trans[::3]
+
+    nframes = len(poses)
     #output_path = join(output_path, 'run%d' % runpass, name.replace(" ", ""))
     output_path = join(output_path, 'run%d' % runpass)
     
     # .mat files
-    matfile_normal = join(output_path, name.replace(" ", "") + "_c%04d_normal.mat" % (ishape + 1))
-    matfile_gtflow = join(output_path, name.replace(" ", "") + "_c%04d_gtflow.mat" % (ishape + 1))
-    matfile_depth = join(output_path, name.replace(" ", "") + "_c%04d_depth.mat" % (ishape + 1))
-    matfile_segm = join(output_path, name.replace(" ", "") + "_c%04d_segm.mat" % (ishape + 1))
+    matfile_normal = join(output_path, "%d_c%04d_normal.mat" % (idx,ishape + 1))
+    matfile_gtflow = join(output_path, "%d_c%04d_gtflow.mat" % (idx,ishape + 1))
+    matfile_depth = join(output_path, "%d_c%04d_depth.mat" % (idx,ishape + 1))
+    matfile_segm = join(output_path, "%d_c%04d_segm.mat" % (idx,ishape + 1))
     dict_normal = {}
     dict_gtflow = {}
     dict_depth = {}
@@ -129,10 +135,10 @@ if __name__ == '__main__':
     FLOAT = Imath.PixelType(Imath.PixelType.FLOAT)
 
     # overlap determined by stride (# subsampled frames to skip)
-    fbegin = ishape*stepsize*stride
-    fend = min(ishape*stepsize*stride + stepsize*clipsize, len(data['poses']))
+    #fbegin = ishape*stepsize*stride
+    #fend = min(ishape*stepsize*stride + stepsize*clipsize, len(data['poses']))
     # LOOP OVER FRAMES
-    for seq_frame, (pose, trans) in enumerate(zip(data['poses'][fbegin:fend:stepsize], data['trans'][fbegin:fend:stepsize])):
+    for seq_frame, (pose, trans) in enumerate(zip(poses, trans)):
         iframe = seq_frame
         
         log_message("Processing frame %d" % iframe)

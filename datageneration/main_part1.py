@@ -606,7 +606,7 @@ def main():
     res_paths = create_composite_nodes(scene.node_tree, params, img=bg_img, idx=idx)
 
     log_message("Loading smpl data")
-    smpl_data = np.load(join(smpl_data_folder, smpl_data_filename))
+    #smpl_data = np.load(join(smpl_data_folder, smpl_data_filename))
     
     log_message("Initializing scene")
     camera_distance = np.random.normal(8.0, 1)
@@ -643,9 +643,9 @@ def main():
         bpy.data.shape_keys["Key"].key_blocks[k].slider_max = 10
 
     log_message("Loading body data")
-    cmu_parms, name = load_body_data(smpl_data, ob, obname, idx=idx, gender=gender)
+    #cmu_parms, name = load_body_data(smpl_data, ob, obname, idx=idx, gender=gender)
     
-    log_message("Loaded body data for %s" % name)
+    #log_message("Loaded body data for %s" % name)
     
     #nb_fshapes = len(fshapes)
     #if idx_info['use_split'] == 'train':
@@ -700,13 +700,14 @@ def main():
         scs[-1].filepath = sh_dst
         scs[-1].update()
 
-    rgb_dirname = name.replace(" ", "") + '_c%04d.mp4' % (ishape + 1)
+    #rgb_dirname = name.replace(" ", "") + '_c%04d.mp4' % (ishape + 1)
+    rgb_dirname = '%d_c%04d.mp4' % (idx,ishape + 1)
     rgb_path = join(tmp_path, rgb_dirname)
 
-    data = cmu_parms[name]
+    #data = cmu_parms[name]
     
-    fbegin = ishape*stepsize*stride
-    fend = min(ishape*stepsize*stride + stepsize*clipsize, len(data['poses']))
+    #fbegin = ishape*stepsize*stride
+    #fend = min(ishape*stepsize*stride + stepsize*clipsize, len(data['poses']))
     
     log_message("Computing how many frames to allocate")
     N = len(poses)
@@ -715,9 +716,11 @@ def main():
 
     # force recomputation of joint angles unless shape is all zeros
     #curr_shape = np.zeros_like(shape)
-    nframes = len(data['poses'][::stepsize])
+    #nframes = len(data['poses'][::stepsize])
+    nframes = len(poses)
 
-    matfile_info = join(output_path, name.replace(" ", "") + "_c%04d_info.mat" % (ishape+1))
+    #matfile_info = join(output_path, name.replace(" ", "") + "_c%04d_info.mat" % (ishape+1))
+    matfile_info = join(output_path, "%d_c%04d_info.mat" % (idx,ishape+1))
     log_message('Working on %s' % matfile_info)
 
     # allocate
@@ -737,11 +740,12 @@ def main():
     dict_info['camDist'] = camera_distance
     dict_info['stride'] = stride
 
+    '''
     if name.replace(" ", "").startswith('h36m'):
         dict_info['source'] = 'h36m'
     else:
         dict_info['source'] = 'cmu'
-
+    '''
     if(output_types['vblur']):
         dict_info['vblur_factor'] = np.empty(N, dtype='float32')
 
@@ -891,17 +895,17 @@ def main():
     bpy.ops.wm.save_as_mainfile(filepath=join(tmp_path, 'pre.blend'))
     
     # save RGB data with ffmpeg (if you don't have h264 codec, you can replace with another one and control the quality with something like -q:v 3)
-    cmd_ffmpeg = 'ffmpeg -y -r 30 -i ''%s'' -c:v h264 -pix_fmt yuv420p -crf 23 ''%s_c%04d.mp4''' % (join(rgb_path, 'Image%04d.png'), join(output_path, name.replace(' ', '')), (ishape + 1))
+    cmd_ffmpeg = 'ffmpeg -y -r 30 -i ''%s'' -c:v h264 -pix_fmt yuv420p -crf 23 ''%s_c%04d.mp4''' % (join(rgb_path, 'Image%04d.png'), join(output_path, idx, (ishape + 1)))
     log_message("Generating RGB video (%s)" % cmd_ffmpeg)
     os.system(cmd_ffmpeg)
     
     if(output_types['vblur']):
-        cmd_ffmpeg_vblur = 'ffmpeg -y -r 30 -i ''%s'' -c:v h264 -pix_fmt yuv420p -crf 23 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" ''%s_c%04d.mp4''' % (join(res_paths['vblur'], 'Image%04d.png'), join(output_path, name.replace(' ', '')+'_vblur'), (ishape + 1))
+        cmd_ffmpeg_vblur = 'ffmpeg -y -r 30 -i ''%s'' -c:v h264 -pix_fmt yuv420p -crf 23 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" ''%s_c%04d.mp4''' % (join(res_paths['vblur'], 'Image%04d.png'), join(output_path, str(idx)+'_vblur'), (ishape + 1))
         log_message("Generating vblur video (%s)" % cmd_ffmpeg_vblur)
         os.system(cmd_ffmpeg_vblur)
    
     if(output_types['fg']):
-        cmd_ffmpeg_fg = 'ffmpeg -y -r 30 -i ''%s'' -c:v h264 -pix_fmt yuv420p -crf 23 ''%s_c%04d.mp4''' % (join(res_paths['fg'], 'Image%04d.png'), join(output_path, name.replace(' ', '')+'_fg'), (ishape + 1))
+        cmd_ffmpeg_fg = 'ffmpeg -y -r 30 -i ''%s'' -c:v h264 -pix_fmt yuv420p -crf 23 ''%s_c%04d.mp4''' % (join(res_paths['fg'], 'Image%04d.png'), join(output_path, str(idx)+'_fg'), (ishape + 1))
         log_message("Generating fg video (%s)" % cmd_ffmpeg_fg)
         os.system(cmd_ffmpeg_fg)
    
