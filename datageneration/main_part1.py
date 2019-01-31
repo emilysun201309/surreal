@@ -895,17 +895,17 @@ def main():
     bpy.ops.wm.save_as_mainfile(filepath=join(tmp_path, 'pre.blend'))
     
     # save RGB data with ffmpeg (if you don't have h264 codec, you can replace with another one and control the quality with something like -q:v 3)
-    cmd_ffmpeg = 'ffmpeg -y -r 30 -i ''%s'' -c:v h264 -pix_fmt yuv420p -crf 23 ''%s_c%04d.mp4''' % (join(rgb_path, 'Image%04d.png'), join(output_path, str(idx), (ishape + 1)))
+    cmd_ffmpeg = 'ffmpeg -y -r 30 -i ''%s'' -c:v h264 -pix_fmt yuv420p -crf 23 ''%s_c%04d.mp4''' % (join(rgb_path, 'Image%04d.png'), join(output_path, str(idx), str(ishape + 1)))
     log_message("Generating RGB video (%s)" % cmd_ffmpeg)
     os.system(cmd_ffmpeg)
     
     if(output_types['vblur']):
-        cmd_ffmpeg_vblur = 'ffmpeg -y -r 30 -i ''%s'' -c:v h264 -pix_fmt yuv420p -crf 23 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" ''%s_c%04d.mp4''' % (join(res_paths['vblur'], 'Image%04d.png'), join(output_path, str(idx)+'_vblur'), (ishape + 1))
+        cmd_ffmpeg_vblur = 'ffmpeg -y -r 30 -i ''%s'' -c:v h264 -pix_fmt yuv420p -crf 23 -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" ''%s_c%04d.mp4''' % (join(res_paths['vblur'], 'Image%04d.png'), join(output_path, str(idx)+'_vblur'), str(ishape + 1))
         log_message("Generating vblur video (%s)" % cmd_ffmpeg_vblur)
         os.system(cmd_ffmpeg_vblur)
    
     if(output_types['fg']):
-        cmd_ffmpeg_fg = 'ffmpeg -y -r 30 -i ''%s'' -c:v h264 -pix_fmt yuv420p -crf 23 ''%s_c%04d.mp4''' % (join(res_paths['fg'], 'Image%04d.png'), join(output_path, str(idx)+'_fg'), (ishape + 1))
+        cmd_ffmpeg_fg = 'ffmpeg -y -r 30 -i ''%s'' -c:v h264 -pix_fmt yuv420p -crf 23 ''%s_c%04d.mp4''' % (join(res_paths['fg'], 'Image%04d.png'), join(output_path, str(idx)+'_fg'), str(ishape + 1))
         log_message("Generating fg video (%s)" % cmd_ffmpeg_fg)
         os.system(cmd_ffmpeg_fg)
    
