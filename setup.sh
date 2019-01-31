@@ -4,17 +4,14 @@
 #USER_DIR=/home/emily/SURREAL/create_environment
 USER_DIR=$1
 
+
 #create and activate virtual environment
 pip install virtualenv
 #python3 virtual env
 virtualenv -p /usr/bin/python3 venv3
 source venv3/bin/activate
 
-#python2 virtual env
-virtualenv -p /usr/bin/python2.7 venv2
 
-#install numpy
-pip install numpy
 #install six
 pip install six
 
@@ -40,12 +37,18 @@ cd ../openexr-2.3.0
 ./configure --prefix=$USER_DIR/usr/local --with-ilmbase-prefix=$USER_DIR/usr/local
 cd ..
 
+#exit python 3 environment
+deactivate
+
+#python2 virtual env
+virtualenv -p /usr/bin/python2.7 venv2
 #install python bindings - use python 2
 source venv2/bin/activate
 pip install numpy
 pip install six
 easy_install -U openexr
-
+#exit python 2 environment
+deactivate
 
 source venv3/bin/activate
 #download background files
