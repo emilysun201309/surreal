@@ -45,6 +45,7 @@ virtualenv -p /usr/bin/python2.7 venv2
 #install python bindings - use python 2
 source venv2/bin/activate
 pip install numpy
+pip install scipy
 pip install six
 easy_install -U openexr
 #exit python 2 environment
