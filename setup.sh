@@ -62,7 +62,7 @@ cd ..
 #blender's default numpy is problematic
 #delete blender's numpy and reinstall
 rm -rf blender-2.78-linux-glibc219-x86_64/2.78/python/lib/python3.5/site-packages/numpy
-rm -rf blender-2.78-linux-glibc219-x86_64/2.78/python/lib/python3.5/site-packages/numpy-1.16.0.dist-info
+rm -rf blender-2.78-linux-glibc219-x86_64/2.78/python/lib/python3.5/site-packages/numpy-1.16.1.dist-info
 blender-2.78-linux-glibc219-x86_64/2.78/python/bin/python3.5m -m pip install numpy
 
 
