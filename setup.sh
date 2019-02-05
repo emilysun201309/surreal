@@ -3,6 +3,7 @@
 
 #USER_DIR=/home/emily/SURREAL/create_environment
 USER_DIR=$1
+IDX=$2
 
 
 #create and activate virtual environment
@@ -69,7 +70,7 @@ blender-2.78-linux-glibc219-x86_64/2.78/python/bin/python3.5m -m pip install num
 cd datageneration
 #change path in config file
 python fix_config.py $USER_DIR
-./run.sh $USER_DIR
+./run.sh $USER_DIR $IDX
 
 
 
