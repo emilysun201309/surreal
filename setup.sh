@@ -46,6 +46,7 @@ virtualenv -p /usr/bin/python2.7 venv2
 #install python bindings - use python 2
 source venv2/bin/activate
 pip install numpy
+pip install scipy
 pip install six
 easy_install -U openexr
 #exit python 2 environment
@@ -63,7 +64,7 @@ cd ..
 #blender's default numpy is problematic
 #delete blender's numpy and reinstall
 rm -rf blender-2.78-linux-glibc219-x86_64/2.78/python/lib/python3.5/site-packages/numpy
-rm -rf blender-2.78-linux-glibc219-x86_64/2.78/python/lib/python3.5/site-packages/numpy-1.16.0.dist-info
+rm -rf blender-2.78-linux-glibc219-x86_64/2.78/python/lib/python3.5/site-packages/numpy-1.16.1.dist-info
 blender-2.78-linux-glibc219-x86_64/2.78/python/bin/python3.5m -m pip install numpy
 
 
