@@ -103,8 +103,8 @@ def main():
         # load annotations
         annotations_path = os.path.join(input_path, basename + '_annotations.json')
         
-        os.rename(annotations_path, 'annotations/%s_annotations.json' %idx)
-        
+        #os.rename(annotations_path, 'annotations/%s_annotations.json' %idx)
+        shutil.copyfile(annotations_path, 'annotations/%s_annotations.json' %idx)
         '''
         # Load annotation.
         annotations_path = os.path.join(input_path, basename + '_annotations.json')
