@@ -92,7 +92,9 @@ def main():
 
         # Load motion.
         mmm_path = os.path.join(input_path, basename + '_mmm.xml')
-        assert os.path.exists(mmm_path)
+        if(os.path.exists(mmm_path) == False):
+            continue
+
         joint_names, frames, root_pos_frames,root_rot_frames = parse_motions(mmm_path)[0]
         print(joint_names)
         if reference_joint_names is None:
