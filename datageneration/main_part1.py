@@ -12,6 +12,7 @@ from glob import glob
 from random import choice
 from pickle import load
 from bpy_extras.object_utils import world_to_camera_view as world2cam
+import shutil
 
 sys.path.insert(0, ".")
 
@@ -691,7 +692,7 @@ def main():
     
     #copy annotation json file
     annotations_path = smpl_data_folder +  '/KIT/annotations/%d_annotations.json'%idx
-    os.rename(annotations_path, output_path + '/%d_annotations.json' %idx)
+    shutil.copyfile(annotations_path, output_path + '/%d_annotations.json' %idx)
 
     # spherical harmonics material needs a script to be loaded and compiled
     scs = []
