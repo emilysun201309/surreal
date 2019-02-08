@@ -575,7 +575,7 @@ def main():
     nh_txt_paths = []
     with open(bg_names) as f:
         for line in f:
-            nh_txt_paths.append(join(bg_path, line))
+            nh_txt_paths.append(line)
 
     # grab clothing names
     log_message("clothing: %s" % clothing_option)
