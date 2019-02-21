@@ -45,60 +45,34 @@ class MotionData(Dataset):
     # Override to give PyTorch access to any image on the dataset
     def __getitem__(self, index):
         data_len = 130
-        depth= np.zeros((data_len,240,320),dtype=int)
+        depth= np.zeros((data_len,240,320))
         if(self.__depth[index] != ''):
-            depth_temp = loadmat(self.__depth[index])
-            depth_temp = [ v for v in depth_temp.values()]
-        
-            if(len(depth_temp)>3):
-                depth_temp = depth_temp[3:]
-                print(depth_temp)
-                #np.stack(depth_temp, axis=0)
-                depth_temp = np.stack(depth_temp, axis=0)
+            with np.load(self.__depth[index]) as depth_temp:
                 length = len(depth_temp)
                 print(length)
                 #if(length <= data_len):
                 #    depth = np.pad(depth,((0,data_len-length),(0,0),(0,0)),'constant')
                 depth[:min(data_len,length)] = depth_temp[:min(data_len,length)]
                 
-        flow = np.zeros((data_len,240,320),dtype=int)
+        flow = np.zeros((data_len,240,320))
         if(self.__flow[index] != ''):
-            flow_temp = loadmat(self.__flow[index])
-            flow_temp = [ v for v in flow_temp.values()]
-            
-            if(len(flow_temp)>3):
-                flow_temp = flow_temp[3:]
-                #np.stack(flow_temp, axis=0)
-                flow_temp = np.stack(flow_temp, axis=0)
+            with np.load(self.__flow[index]) as flow_temp:
                 length = len(flow_temp)
                 #if(length <= data_len):
                 #    flow = np.pad(flow,((0,data_len-length),(0,0),(0,0)),'constant')
                 flow[:min(data_len,length)] = flow_temp[:min(data_len,length)]
 
-        segm = np.zeros((data_len,240,320),dtype=int)
+        segm = np.zeros((data_len,240,320))
         if(self.__segm[index] != ''):
-            segm_temp = loadmat(self.__segm[index])
-            segm_temp = [ v for v in segm_temp.values()]
-            
-            if(len(segm_temp)>3):
-                segm_temp = segm_temp[3:]
-                #np.stack(segm_temp, axis=0)
-                segm_temp = np.stack(segm_temp, axis=0)
+            with np.load(self.__segm[index]) as segm_temp:
                 length = len(segm_temp)
                 #if(length <= data_len):
                 #    segm = np.pad(segm,((0,data_len-length),(0,0),(0,0)),'constant')
                 segm[:min(data_len,length)] = segm_temp[:min(data_len,length)]
             
-        normal = np.zeros((data_len,240,320),dtype=int)
+        normal = np.zeros((data_len,240,320))
         if(self.__normal[index] != ''):
-            normal_temp = loadmat(self.__normal[index])
-            #print(self.__normal[index])
-            normal_temp = [ v for v in normal_temp.values()]
-            
-            if(len(normal_temp)>3):
-                normal_temp = normal_temp[3:]
-                #np.stack(normal, axis=0)
-                normal_temp = np.stack(normal_temp, axis=0)
+            with np.load(self.__normal[index]) as normal_temp:
                 length = len(normal_temp)
                 #if(length <= data_len):
                 #    normal = np.pad(normal,((0,data_len-length),(0,0),(0,0)),'constant')

@@ -14,15 +14,15 @@ for subdir, dirs, files in os.walk("out/"):
       directory =  os.path.join("out/", name)
       depth,flow,segm,normal,info,img = None,None,None,None,None,None
       for file in os.listdir(directory):
-          if file.endswith("depth.mat"):
+          if file.endswith("depth.npy"):
             depth = os.path.join(directory, file)
-          if file.endswith("gtflow.mat"):
+          if file.endswith("gtflow.npy"):
             flow = os.path.join(directory, file)
             
-          if file.endswith("segm.mat"):
+          if file.endswith("segm.npy"):
             segm = os.path.join(directory, file)
             
-          if file.endswith("normal.mat"):
+          if file.endswith("normal.npy"):
             normal = os.path.join(directory, file)
           
           if file.endswith(".json"):
