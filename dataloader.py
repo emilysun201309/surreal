@@ -47,36 +47,36 @@ class MotionData(Dataset):
         data_len = 130
         depth= np.zeros((data_len,240,320))
         if(self.__depth[index] != ''):
-            with np.load(self.__depth[index]) as depth_temp:
-                length = len(depth_temp)
-                print(length)
-                #if(length <= data_len):
-                #    depth = np.pad(depth,((0,data_len-length),(0,0),(0,0)),'constant')
-                depth[:min(data_len,length)] = depth_temp[:min(data_len,length)]
-                
+            depth_temp = np.load(self.__depth[index])
+            length = len(depth_temp)
+            print(length)
+            #if(length <= data_len):
+            #    depth = np.pad(depth,((0,data_len-length),(0,0),(0,0)),'constant')
+            depth[:min(data_len,length)] = depth_temp[:min(data_len,length)]
+            
         flow = np.zeros((data_len,240,320))
         if(self.__flow[index] != ''):
-            with np.load(self.__flow[index]) as flow_temp:
-                length = len(flow_temp)
-                #if(length <= data_len):
-                #    flow = np.pad(flow,((0,data_len-length),(0,0),(0,0)),'constant')
-                flow[:min(data_len,length)] = flow_temp[:min(data_len,length)]
+            flow_temp = np.load(self.__flow[index])
+            length = len(flow_temp)
+            #if(length <= data_len):
+            #    flow = np.pad(flow,((0,data_len-length),(0,0),(0,0)),'constant')
+            flow[:min(data_len,length)] = flow_temp[:min(data_len,length)]
 
         segm = np.zeros((data_len,240,320))
         if(self.__segm[index] != ''):
-            with np.load(self.__segm[index]) as segm_temp:
-                length = len(segm_temp)
-                #if(length <= data_len):
-                #    segm = np.pad(segm,((0,data_len-length),(0,0),(0,0)),'constant')
-                segm[:min(data_len,length)] = segm_temp[:min(data_len,length)]
-            
+            segm_temp = np.load(self.__segm[index])
+            length = len(segm_temp)
+            #if(length <= data_len):
+            #    segm = np.pad(segm,((0,data_len-length),(0,0),(0,0)),'constant')
+            segm[:min(data_len,length)] = segm_temp[:min(data_len,length)]
+        
         normal = np.zeros((data_len,240,320))
         if(self.__normal[index] != ''):
-            with np.load(self.__normal[index]) as normal_temp:
-                length = len(normal_temp)
-                #if(length <= data_len):
-                #    normal = np.pad(normal,((0,data_len-length),(0,0),(0,0)),'constant')
-                normal[:min(data_len,length)] = normal_temp[:min(data_len,length)]
+            normal_temp = np.load(self.__normal[index])
+            length = len(normal_temp)
+            #if(length <= data_len):
+            #    normal = np.pad(normal,((0,data_len-length),(0,0),(0,0)),'constant')
+            normal[:min(data_len,length)] = normal_temp[:min(data_len,length)]
 
         #annotation
         if(self.__annotation[index] != ''):
