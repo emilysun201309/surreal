@@ -52,6 +52,7 @@ class MotionData(Dataset):
         
             if(len(depth_temp)>3):
                 depth_temp = depth_temp[3:]
+                print(depth_temp)
                 #np.stack(depth_temp, axis=0)
                 depth_temp = np.stack(depth_temp, axis=0)
                 length = len(depth_temp)
