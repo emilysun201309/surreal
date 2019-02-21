@@ -123,14 +123,14 @@ if __name__ == '__main__':
     output_path = join(output_path, 'run%d' % runpass)
     
     # .mat files
-    matfile_normal = join(output_path, "%d_c%04d_normal.mat" % (idx,ishape + 1))
-    matfile_gtflow = join(output_path, "%d_c%04d_gtflow.mat" % (idx,ishape + 1))
-    matfile_depth = join(output_path, "%d_c%04d_depth.mat" % (idx,ishape + 1))
-    matfile_segm = join(output_path, "%d_c%04d_segm.mat" % (idx,ishape + 1))
-    dict_normal = {}
-    dict_gtflow = {}
-    dict_depth = {}
-    dict_segm = {}
+    matfile_normal = join(output_path, "%d_c%04d_normal.npy" % (idx,ishape + 1))
+    matfile_gtflow = join(output_path, "%d_c%04d_gtflow.npy" % (idx,ishape + 1))
+    matfile_depth = join(output_path, "%d_c%04d_depth.npy" % (idx,ishape + 1))
+    matfile_segm = join(output_path, "%d_c%04d_segm.npy" % (idx,ishape + 1))
+    normal = np.zeros(nframes,resx,resy)
+    gtflow = np.zeros(nframes,resx,resy)
+    depth = np.zeros(nframes,resx,resy)
+    segm = np.zeros(nframes,resx,resy)
     get_real_frame = lambda ifr: ifr
     FLOAT = Imath.PixelType(Imath.PixelType.FLOAT)
 
@@ -149,23 +149,35 @@ if __name__ == '__main__':
                 exr_file = OpenEXR.InputFile(path)
                 if k == 'normal':
                     mat = np.transpose(np.reshape([array.array('f', exr_file.channel(Chan, FLOAT)).tolist() for Chan in ("R", "G", "B")], (3, resx, resy)), (1, 2, 0))
-                    dict_normal['normal_%d' % (iframe + 1)] = mat.astype(np.float32, copy=False) # +1 for the 1-indexing
+                    #dict_normal['normal_%d' % (iframe + 1)] = mat.astype(np.float32, copy=False) # +1 for the 1-indexing
+                    normal[iframe,:,:] = mat
                 elif k == 'gtflow':
                     mat = np.transpose(np.reshape([array.array('f', exr_file.channel(Chan, FLOAT)).tolist() for Chan in ("R", "G")], (2, resx, resy)), (1, 2, 0))
-                    dict_gtflow['gtflow_%d' % (iframe + 1)] = mat.astype(np.float32, copy=False)
+                    #dict_gtflow['gtflow_%d' % (iframe + 1)] = mat.astype(np.float32, copy=False)
+                    gtflow[iframe,:,:] = mat
                 elif k == 'depth':
                     mat = np.reshape([array.array('f', exr_file.channel(Chan, FLOAT)).tolist() for Chan in ("R")], (resx, resy))
-                    dict_depth['depth_%d' % (iframe + 1)] = mat.astype(np.float32, copy=False)
+                    #dict_depth['depth_%d' % (iframe + 1)] = mat.astype(np.float32, copy=False)
+                    depth[iframe,:,:] = mat
                 elif k == 'segm':
                     mat = np.reshape([array.array('f', exr_file.channel(Chan, FLOAT)).tolist() for Chan in ("R")], (resx, resy))
-                    dict_segm['segm_%d' % (iframe + 1)] = mat.astype(np.uint8, copy=False)
+                    #dict_segm['segm_%d' % (iframe + 1)] = mat.astype(np.uint8, copy=False)
+                    segm[iframe,:,:] = mat
                 #remove(path)
 
+    #save as numpy array instead
+
+    '''
     import scipy.io
     scipy.io.savemat(matfile_normal, dict_normal, do_compression=True)
     scipy.io.savemat(matfile_gtflow, dict_gtflow, do_compression=True)
     scipy.io.savemat(matfile_depth, dict_depth, do_compression=True)
     scipy.io.savemat(matfile_segm, dict_segm, do_compression=True)
+    '''
+    np.save(matfile_normal,normal)
+    np.save(matfile_gtflow,gtflow)
+    np.save(matfile_depth,depth)
+    np.save(matfile_segm,segm)
 
     # cleaning up tmp
     if tmp_path != "" and tmp_path != "/":
