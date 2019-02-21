@@ -45,66 +45,63 @@ class MotionData(Dataset):
     # Override to give PyTorch access to any image on the dataset
     def __getitem__(self, index):
         data_len = 130
-        depth= np.nan
+        depth= np.zeros((data_len,240,320),dtype=int)
         if(self.__depth[index] != ''):
-            print(self.__depth[index])
-            depth = loadmat(self.__depth[index])
-            depth = [ v for v in depth.values()]
-            
-            if(len(depth)>3):
-                depth = depth[3:]
-                np.stack(depth, axis=0)
-                depth = np.stack(depth, axis=0)
-                length = len(depth)
-                if(length <= data_len):
-                    depth = np.pad(depth,((0,data_len-length),(0,0),(0,0)),'constant')
-            else:
-                depth = np.nan
-        flow = np.nan
+            depth_temp = loadmat(self.__depth[index])
+            depth_temp = [ v for v in depth_temp.values()]
+        
+            if(len(depth_temp)>3):
+                depth_temp = depth_temp[3:]
+                #np.stack(depth_temp, axis=0)
+                depth_temp = np.stack(depth_temp, axis=0)
+                length = len(depth_temp)
+                print(length)
+                #if(length <= data_len):
+                #    depth = np.pad(depth,((0,data_len-length),(0,0),(0,0)),'constant')
+                depth[:min(data_len,length)] = depth_temp[:min(data_len,length)]
+                
+        flow = np.zeros((data_len,240,320),dtype=int)
         if(self.__flow[index] != ''):
-            flow = loadmat(self.__flow[index])
-            print(self.__flow[index])
-            flow = [ v for v in flow.values()]
+            flow_temp = loadmat(self.__flow[index])
+            flow_temp = [ v for v in flow_temp.values()]
             
-            if(len(flow)>3):
-                flow = flow[3:]
-                np.stack(flow, axis=0)
-                flow = np.stack(flow, axis=0)
-                length = len(flow)
-                if(length <= data_len):
-                    flow = np.pad(flow,((0,data_len-length),(0,0),(0,0)),'constant')
-            else:
-                flow = np.nan
-        segm = np.nan
+            if(len(flow_temp)>3):
+                flow_temp = flow_temp[3:]
+                #np.stack(flow_temp, axis=0)
+                flow_temp = np.stack(flow_temp, axis=0)
+                length = len(flow_temp)
+                #if(length <= data_len):
+                #    flow = np.pad(flow,((0,data_len-length),(0,0),(0,0)),'constant')
+                flow[:min(data_len,length)] = flow_temp[:min(data_len,length)]
+
+        segm = np.zeros((data_len,240,320),dtype=int)
         if(self.__segm[index] != ''):
-            segm = loadmat(self.__segm[index])
-            print(self.__segm[index])
-            segm = [ v for v in segm.values()]
+            segm_temp = loadmat(self.__segm[index])
+            segm_temp = [ v for v in segm_temp.values()]
             
-            if(len(segm)>3):
-                segm = segm[3:]
-                np.stack(segm, axis=0)
-                segm = np.stack(segm, axis=0)
-                length = len(segm)
-                if(length <= data_len):
-                    segm = np.pad(segm,((0,data_len-length),(0,0),(0,0)),'constant')
-            else:
-                segm = np.nan
-        normal = np.nan
+            if(len(segm_temp)>3):
+                segm_temp = segm_temp[3:]
+                #np.stack(segm_temp, axis=0)
+                segm_temp = np.stack(segm_temp, axis=0)
+                length = len(segm_temp)
+                #if(length <= data_len):
+                #    segm = np.pad(segm,((0,data_len-length),(0,0),(0,0)),'constant')
+                segm[:min(data_len,length)] = segm_temp[:min(data_len,length)]
+            
+        normal = np.zeros((data_len,240,320),dtype=int)
         if(self.__normal[index] != ''):
-            normal = loadmat(self.__normal[index])
-            print(self.__normal[index])
-            normal = [ v for v in normal.values()]
+            normal_temp = loadmat(self.__normal[index])
+            #print(self.__normal[index])
+            normal_temp = [ v for v in normal_temp.values()]
             
-            if(len(normal)>3):
-                normal = normal[3:]
-                np.stack(normal, axis=0)
-                normal = np.stack(normal, axis=0)
-                length = len(normal)
-                if(length <= data_len):
-                    normal = np.pad(normal,((0,data_len-length),(0,0),(0,0)),'constant')
-            else:
-                normal = np.nan
+            if(len(normal_temp)>3):
+                normal_temp = normal_temp[3:]
+                #np.stack(normal, axis=0)
+                normal_temp = np.stack(normal_temp, axis=0)
+                length = len(normal_temp)
+                #if(length <= data_len):
+                #    normal = np.pad(normal,((0,data_len-length),(0,0),(0,0)),'constant')
+                normal[:min(data_len,length)] = normal_temp[:min(data_len,length)]
 
         #annotation
         if(self.__annotation[index] != ''):
@@ -119,7 +116,9 @@ class MotionData(Dataset):
             
             tarfile.open(self.__img[index]).extractall(self.__img[index].split(".")[0])
             
-            for i in range(data_len):
+            length = len(glob.glob("%s/*/*" %(self.__img[index].split(".")[0])))
+            print('image',length)
+            for i in range(min(data_len,length)):
                 path = glob.glob("%s/*/Image%04d.png" %(self.__img[index].split(".")[0],i))
                 print('path',path)
                 with Image.open(path[0]) as img_temp:
