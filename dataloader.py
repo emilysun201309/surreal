@@ -114,7 +114,7 @@ class MotionData(Dataset):
         print('segm',segm.shape)
         normal = torch.from_numpy(np.asarray(normal))
         print('normal',normal.shape)
-        normal = torch.from_numpy(np.asarray(img))
+        img = torch.from_numpy(np.asarray(img))
         print('image', img.shape)
         return depth,flow,segm,normal,annotation,img
 
