@@ -85,8 +85,9 @@ class MotionData(Dataset):
                     print(annotation)
 
         #images
+        img = np.zeros((data_len,240,320,3),dtype=int)
         if(self.__img[index] != ''):
-            img = np.zeros((data_len,240,320,3),dtype=int)
+            
             #dimension (H,W,C)
             
             tarfile.open(self.__img[index]).extractall(self.__img[index].split(".")[0])
