@@ -133,10 +133,13 @@ def main():
     #print(image)
     plt.imshow(image)
     plt.show()
+    plt.savefig('image.png')
     plt.imshow(depth.numpy()[0,0,:,:])
     plt.show()
+    plt.savefig('depth.png')
     plt.imshow(segm.numpy()[0,0,:,:])
     plt.show()
+    plt.savefig('segm.png')
 
 if __name__ == '__main__':
     main()
