@@ -134,15 +134,15 @@ def main():
         image = img.numpy()[0,i,:,:,:]
         plt.imshow(image)
         #plt.show()
-        plt.savefig('image%d.png'%i)
+        plt.savefig('render/image%d.png'%i)
         #print(image)
     
         plt.imshow(depth.numpy()[0,i,:,:])
         #plt.show()
-        plt.savefig('depth%d.png'%i)
+        plt.savefig('render/depth%d.png'%i)
         plt.imshow(segm.numpy()[0,i,:,:])
         #plt.show()
-        plt.savefig('segm%d.png'%i)
+        plt.savefig('render/segm%d.png'%i)
 
 if __name__ == '__main__':
     main()
