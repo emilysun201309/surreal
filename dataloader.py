@@ -128,18 +128,21 @@ def main():
     train_loader = DataLoader(dset_train, batch_size=5, shuffle=True, num_workers=1)
     depth,flow,segm,normal,annotation,img = next(iter(train_loader))
     print('Batch shape:',depth.numpy().shape, flow.numpy().shape,img.numpy().shape)
-    image = img.numpy()[0,0,:,:,:]
     
-    #print(image)
-    plt.imshow(image)
-    plt.show()
-    plt.savefig('image.png')
-    plt.imshow(depth.numpy()[0,0,:,:])
-    plt.show()
-    plt.savefig('depth.png')
-    plt.imshow(segm.numpy()[0,0,:,:])
-    plt.show()
-    plt.savefig('segm.png')
+    for i in range((img.numpy()).shape[1]):
+
+        image = img.numpy()[0,i,:,:,:]
+        plt.imshow(image)
+        #plt.show()
+        plt.savefig('image%d.png'%i)
+        #print(image)
+    
+        plt.imshow(depth.numpy()[0,i,:,:])
+        #plt.show()
+        plt.savefig('depth%d.png'%i)
+        plt.imshow(segm.numpy()[0,i,:,:])
+        #plt.show()
+        plt.savefig('segm%d.png'%i)
 
 if __name__ == '__main__':
     main()
