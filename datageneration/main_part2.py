@@ -124,10 +124,11 @@ if __name__ == '__main__':
     output_path = join(output_path, 'run%d' % runpass)
     
     # try loading data using h5py
-    matfile_normal = join(output_path, "%d_c%04d_normal.h5" % (idx,ishape + 1))
-    matfile_gtflow = join(output_path, "%d_c%04d_gtflow.h5" % (idx,ishape + 1))
-    matfile_depth = join(output_path, "%d_c%04d_depth.h5" % (idx,ishape + 1))
-    matfile_segm = join(output_path, "%d_c%04d_segm.h5" % (idx,ishape + 1))
+    #matfile_normal = join(output_path, "%d_c%04d_normal.h5" % (idx,ishape + 1))
+    #matfile_gtflow = join(output_path, "%d_c%04d_gtflow.h5" % (idx,ishape + 1))
+    #matfile_depth = join(output_path, "%d_c%04d_depth.h5" % (idx,ishape + 1))
+    #matfile_segm = join(output_path, "%d_c%04d_segm.h5" % (idx,ishape + 1))
+    h5f_data = join(output_path, "%d_c%04d_data.h5" % (idx,ishape + 1))
     normal = np.zeros((nframes,resx,resy,3))
     gtflow = np.zeros((nframes,resx,resy,2))
     depth = np.zeros((nframes,resx,resy))
@@ -181,16 +182,10 @@ if __name__ == '__main__':
     np.save(matfile_depth,depth)
     np.save(matfile_segm,segm)
     '''
-    h5f_normal = h5py.File('matfile_normal', 'w')
+    h5f = h5py.File('h5f_data', 'w')
     h5f.create_dataset('normal', data=normal)
-    h5f.close()
-    h5f_gtflow = h5py.File('matfile_gtflow', 'w')
     h5f.create_dataset('gtflow', data=gtflow)
-    h5f.close()
-    h5f_depth = h5py.File('matfile_depth', 'w')
     h5f.create_dataset('depth', data=depth)
-    h5f.close()
-    h5f_segm = h5py.File('matfile_segm', 'w')
     h5f.create_dataset('segm', data=segm)
     h5f.close()
     # cleaning up tmp

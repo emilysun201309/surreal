@@ -16,10 +16,11 @@ import glob
 FOLDER_DATASET = "/out"
 
 class MotionData(Dataset):
-    __depth = []
-    __flow = []
-    __segm = []
-    __normal = []
+    #__depth = []
+    #__flow = []
+    #__segm = []
+    #__normal = []
+    __data = []
     __annotation = []
     __img = []
 
@@ -30,13 +31,14 @@ class MotionData(Dataset):
             csv_reader = csv.DictReader(csv_file)
             for row in csv_reader:
                 # depth path
-                self.__depth.append(row['depth'])        
+                #self.__depth.append(row['depth'])        
                 # flow path
-                self.__flow.append(row['flow'])
+                #self.__flow.append(row['flow'])
                 # segm path
-                self.__segm.append(row['segm'])        
+                #self.__segm.append(row['segm'])        
                 # normal path
-                self.__normal.append(row['normal'])
+                #self.__normal.append(row['normal'])
+                self.__data.append(row['data'])
                 # annotation path
                 self.__annotation.append(row['annotation'])
                 #image path
@@ -44,10 +46,14 @@ class MotionData(Dataset):
 
     # Override to give PyTorch access to any image on the dataset
     def __getitem__(self, index):
+        try:
+            h5f = h5py.File(self.__data[index],'r')
+        except:
+            print('datafile not found')
         data_len = 130
         depth= np.zeros((data_len,240,320))
         try:
-            depth_temp = np.load(self.__depth[index]) 
+            depth_temp = h5f['depth'][:] 
             length = len(depth_temp)
             #if(length <= data_len):
             #    depth = np.pad(depth,((0,data_len-length),(0,0),(0,0)),'constant')
@@ -57,7 +63,7 @@ class MotionData(Dataset):
               
         flow = np.zeros((data_len,240,320,2))
         try:
-            flow_temp = np.load(self.__flow[index])
+            flow_temp = h5f['gtflow'][:] 
             length = len(flow_temp)
             #if(length <= data_len):
             #    flow = np.pad(flow,((0,data_len-length),(0,0),(0,0)),'constant')
@@ -66,7 +72,7 @@ class MotionData(Dataset):
             print("problem with %d flow data"%index)
         segm = np.zeros((data_len,240,320))
         try:
-            segm_temp = np.load(self.__segm[index])
+            segm_temp = h5f['segm'][:] 
             length = len(segm_temp)
             #if(length <= data_len):
             #    segm = np.pad(segm,((0,data_len-length),(0,0),(0,0)),'constant')
@@ -75,7 +81,7 @@ class MotionData(Dataset):
             print("problem with %d segm data"%index)
         normal = np.zeros((data_len,240,320,3))
         try:
-            normal_temp = np.load(self.__normal[index])
+            normal_temp = h5f['normal'][:] 
             length = len(normal_temp)
             #if(length <= data_len):
             #    normal = np.pad(normal,((0,data_len-length),(0,0),(0,0)),'constant')
