@@ -3,6 +3,7 @@ import os
 from os import remove
 from os.path import join, dirname, realpath, exists
 import numpy as np
+import h5py
 
 def load_body_data(smpl_data, idx=0):
     cmu_keys = []
@@ -122,11 +123,11 @@ if __name__ == '__main__':
     #output_path = join(output_path, 'run%d' % runpass, name.replace(" ", ""))
     output_path = join(output_path, 'run%d' % runpass)
     
-    # .mat files
-    matfile_normal = join(output_path, "%d_c%04d_normal.npy" % (idx,ishape + 1))
-    matfile_gtflow = join(output_path, "%d_c%04d_gtflow.npy" % (idx,ishape + 1))
-    matfile_depth = join(output_path, "%d_c%04d_depth.npy" % (idx,ishape + 1))
-    matfile_segm = join(output_path, "%d_c%04d_segm.npy" % (idx,ishape + 1))
+    # try loading data using h5py
+    matfile_normal = join(output_path, "%d_c%04d_normal.h5" % (idx,ishape + 1))
+    matfile_gtflow = join(output_path, "%d_c%04d_gtflow.h5" % (idx,ishape + 1))
+    matfile_depth = join(output_path, "%d_c%04d_depth.h5" % (idx,ishape + 1))
+    matfile_segm = join(output_path, "%d_c%04d_segm.h5" % (idx,ishape + 1))
     normal = np.zeros((nframes,resx,resy,3))
     gtflow = np.zeros((nframes,resx,resy,2))
     depth = np.zeros((nframes,resx,resy))
@@ -174,11 +175,24 @@ if __name__ == '__main__':
     scipy.io.savemat(matfile_depth, dict_depth, do_compression=True)
     scipy.io.savemat(matfile_segm, dict_segm, do_compression=True)
     '''
+    '''
     np.save(matfile_normal,normal)
     np.save(matfile_gtflow,gtflow)
     np.save(matfile_depth,depth)
     np.save(matfile_segm,segm)
-
+    '''
+    h5f_normal = h5py.File('matfile_normal', 'w')
+    h5f.create_dataset('normal', data=normal)
+    h5f.close()
+    h5f_gtflow = h5py.File('matfile_gtflow', 'w')
+    h5f.create_dataset('gtflow', data=gtflow)
+    h5f.close()
+    h5f_depth = h5py.File('matfile_depth', 'w')
+    h5f.create_dataset('depth', data=depth)
+    h5f.close()
+    h5f_segm = h5py.File('matfile_segm', 'w')
+    h5f.create_dataset('segm', data=segm)
+    h5f.close()
     # cleaning up tmp
     if tmp_path != "" and tmp_path != "/":
         log_message("Cleaning up tmp")
