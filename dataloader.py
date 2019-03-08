@@ -125,24 +125,33 @@ class MotionData(Dataset):
 
 def main():
     dset_train = MotionData(FOLDER_DATASET)
-    train_loader = DataLoader(dset_train, batch_size=5, shuffle=True, num_workers=1)
+    train_loader = DataLoader(dset_train, batch_size=1, shuffle=True, num_workers=1)
     depth,flow,segm,normal,annotation,img = next(iter(train_loader))
     print('Batch shape:',depth.numpy().shape, flow.numpy().shape,img.numpy().shape)
     
     for i in range((img.numpy()).shape[1]):
-
+        
         image = img.numpy()[0,i,:,:,:]
+        
         plt.imshow(image)
-        #plt.show()
-        plt.savefig('render/image%d.png'%i)
+        # plt.show()
+        plt.waitforbuttonpress()
+        #plt.savefig('render/image%d.png'%i)
         #print(image)
-    
-        plt.imshow(depth.numpy()[0,i,:,:])
+        ax1 = plt.subplot(221)
+        ax1.imshow(depth.numpy()[0,i,:,:])
         #plt.show()
-        plt.savefig('render/depth%d.png'%i)
-        plt.imshow(segm.numpy()[0,i,:,:])
+        #plt.waitforbuttonpress()
+        #plt.savefig('render/depth%d.png'%i)
+        ax2 = plt.subplot(222)
+        ax2.imshow(segm.numpy()[0,i,:,:])
         #plt.show()
-        plt.savefig('render/segm%d.png'%i)
+        ax3 = plt.subplot(223)
+        ax3.imshow(flow.numpy()[0,i,:,:])
+        ax4 = plt.subplot(224)
+        ax4.imshow(normal.numpy()[0,i,:,:])
+        plt.waitforbuttonpress()
+        #plt.savefig('render/segm%d.png'%i)
 
 if __name__ == '__main__':
     main()
