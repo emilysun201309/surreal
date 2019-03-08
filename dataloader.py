@@ -132,7 +132,7 @@ class MotionData(Dataset):
 
     # Override to give PyTorch size of dataset
     def __len__(self):
-        return len(self.__depth)
+        return len(self.__data)
 
 def main():
     dset_train = MotionData(FOLDER_DATASET)
