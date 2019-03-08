@@ -47,12 +47,15 @@ class MotionData(Dataset):
 
     # Override to give PyTorch access to any image on the dataset
     def __getitem__(self, index):
-        
+        print('load file')
         h5f = h5py.File(self.__data[index],'r')
+        print('finish loading')
         data_len = 130
         depth= np.zeros((data_len,240,320))
         try:
+            print('load depth')
             depth_temp = h5f['depth'][:] 
+            print('finish loading')
             length = len(depth_temp)
             #if(length <= data_len):
             #    depth = np.pad(depth,((0,data_len-length),(0,0),(0,0)),'constant')
