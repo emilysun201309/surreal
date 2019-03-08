@@ -11,6 +11,7 @@ import json
 from PIL import Image
 import tarfile
 import glob
+import h5py
 
 
 FOLDER_DATASET = "/out"
