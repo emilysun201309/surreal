@@ -127,8 +127,8 @@ if __name__ == '__main__':
     matfile_gtflow = join(output_path, "%d_c%04d_gtflow.npy" % (idx,ishape + 1))
     matfile_depth = join(output_path, "%d_c%04d_depth.npy" % (idx,ishape + 1))
     matfile_segm = join(output_path, "%d_c%04d_segm.npy" % (idx,ishape + 1))
-    normal = np.zeros((nframes,resx,resy))
-    gtflow = np.zeros((nframes,resx,resy))
+    normal = np.zeros((nframes,resx,resy,3))
+    gtflow = np.zeros((nframes,resx,resy,2))
     depth = np.zeros((nframes,resx,resy))
     segm = np.zeros((nframes,resx,resy))
     get_real_frame = lambda ifr: ifr
