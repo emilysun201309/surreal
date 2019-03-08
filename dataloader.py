@@ -54,7 +54,7 @@ class MotionData(Dataset):
             #    depth = np.pad(depth,((0,data_len-length),(0,0),(0,0)),'constant')
             depth[:min(data_len,length)] = depth_temp[:min(data_len,length)]
             
-        flow = np.zeros((data_len,240,320))
+        flow = np.zeros((data_len,240,320,2))
         if(self.__flow[index] != ''):
             flow_temp = np.load(self.__flow[index])
             length = len(flow_temp)
@@ -70,7 +70,7 @@ class MotionData(Dataset):
             #    segm = np.pad(segm,((0,data_len-length),(0,0),(0,0)),'constant')
             segm[:min(data_len,length)] = segm_temp[:min(data_len,length)]
         
-        normal = np.zeros((data_len,240,320))
+        normal = np.zeros((data_len,240,320,3))
         if(self.__normal[index] != ''):
             normal_temp = np.load(self.__normal[index])
             length = len(normal_temp)
@@ -128,30 +128,31 @@ def main():
     train_loader = DataLoader(dset_train, batch_size=1, shuffle=True, num_workers=1)
     depth,flow,segm,normal,annotation,img = next(iter(train_loader))
     print('Batch shape:',depth.numpy().shape, flow.numpy().shape,img.numpy().shape)
-    
-    for i in range((img.numpy()).shape[1]):
-        
-        image = img.numpy()[0,i,:,:,:]
+    frames = int(img.numpy().shape[1]/10)  
+    for i in range(frames):
+        idx = i * 10
+        image = img.numpy()[0,idx,:,:,:]
         
         plt.imshow(image)
         # plt.show()
         plt.waitforbuttonpress()
         #plt.savefig('render/image%d.png'%i)
         #print(image)
+        #plt.close()
         ax1 = plt.subplot(221)
-        ax1.imshow(depth.numpy()[0,i,:,:])
+        ax1.imshow(depth.numpy()[0,idx,:,:])
         #plt.show()
         #plt.waitforbuttonpress()
         #plt.savefig('render/depth%d.png'%i)
         ax2 = plt.subplot(222)
-        ax2.imshow(segm.numpy()[0,i,:,:])
+        ax2.imshow(segm.numpy()[0,idx,:,:])
         #plt.show()
         ax3 = plt.subplot(223)
-        ax3.imshow(flow.numpy()[0,i,:,:])
+        ax3.imshow(flow.numpy()[0,idx,:,:,0])
         ax4 = plt.subplot(224)
-        ax4.imshow(normal.numpy()[0,i,:,:])
+        ax4.imshow(normal.numpy()[0,idx,:,:,:])
         plt.waitforbuttonpress()
         #plt.savefig('render/segm%d.png'%i)
-
+        #plt.close()
 if __name__ == '__main__':
     main()
