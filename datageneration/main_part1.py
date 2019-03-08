@@ -227,7 +227,7 @@ def init_scene(scene, params, gender='female'):
         bpy.ops.import_scene.fbx(filepath=join(params['smpl_data_folder'], 'fe2.fbx' ),
                                 axis_forward='Y', axis_up='Z', global_scale=1)
     else:
-        bpy.ops.import_scene.fbx(filepath=join(params['smpl_data_folder'], 'male.fbx' ),
+        bpy.ops.import_scene.fbx(filepath=join(params['smpl_data_folder'], 'ma.fbx' ),
                                 axis_forward='Y', axis_up='Z', global_scale=1)
     obname = '%s_avg.001' % gender[0]
     print(obname) 
