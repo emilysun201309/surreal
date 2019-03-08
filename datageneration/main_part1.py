@@ -576,7 +576,7 @@ def main():
     scene.use_nodes = True
 
     log_message("Listing background images")
-    bg_names = join(bg_path, '%s_img.txt' % idx_info['use_split'])
+    bg_names = join(bg_path, 'test_img.txt' )
     nh_txt_paths = []
     with open(bg_names) as f:
         for line in f:
