@@ -182,7 +182,7 @@ if __name__ == '__main__':
     np.save(matfile_depth,depth)
     np.save(matfile_segm,segm)
     '''
-    h5f = h5py.File('h5f_data', 'w')
+    h5f = h5py.File(h5f_data, 'w')
     h5f.create_dataset('normal', data=normal)
     h5f.create_dataset('gtflow', data=gtflow)
     h5f.create_dataset('depth', data=depth)
