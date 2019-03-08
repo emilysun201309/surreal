@@ -223,8 +223,12 @@ def init_scene(scene, params, gender='female'):
     # load fbx model
     #bpy.ops.import_scene.fbx(filepath=join(params['smpl_data_folder'], 'basicModel_%s_lbs_10_207_0_v1.0.2.fbx' % gender[0]),
     #                         axis_forward='Y', axis_up='Z', global_scale=100)
-    bpy.ops.import_scene.fbx(filepath=join(params['smpl_data_folder'], 'fe2.fbx' ),
-                             axis_forward='Y', axis_up='Z', global_scale=1)
+    if gender=='female':
+        bpy.ops.import_scene.fbx(filepath=join(params['smpl_data_folder'], 'fe2.fbx' ),
+                                axis_forward='Y', axis_up='Z', global_scale=1)
+    else:
+        bpy.ops.import_scene.fbx(filepath=join(params['smpl_data_folder'], 'male.fbx' ),
+                                axis_forward='Y', axis_up='Z', global_scale=1)
     obname = '%s_avg.001' % gender[0]
     print(obname) 
     ob = bpy.data.objects[obname]
@@ -563,8 +567,8 @@ def main():
 
     genders = {0: 'female', 1: 'male'}
     # pick random gender
-    #gender = choice(genders)
-    gender = 'female'
+    gender = choice(genders)
+    #gender = 'female'
     scene = bpy.data.scenes['Scene']
     scene.render.engine = 'CYCLES'
     bpy.data.materials['Material'].use_nodes = True
