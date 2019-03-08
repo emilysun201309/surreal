@@ -46,47 +46,51 @@ class MotionData(Dataset):
     def __getitem__(self, index):
         data_len = 130
         depth= np.zeros((data_len,240,320))
-        if(self.__depth[index] != ''):
-            depth_temp = np.load(self.__depth[index])
+        try:
+            depth_temp = np.load(self.__depth[index]) 
             length = len(depth_temp)
-            print(length)
             #if(length <= data_len):
             #    depth = np.pad(depth,((0,data_len-length),(0,0),(0,0)),'constant')
             depth[:min(data_len,length)] = depth_temp[:min(data_len,length)]
-            
+        except:
+            print("problem with %d depth data"%index)
+              
         flow = np.zeros((data_len,240,320,2))
-        if(self.__flow[index] != ''):
+        try:
             flow_temp = np.load(self.__flow[index])
             length = len(flow_temp)
             #if(length <= data_len):
             #    flow = np.pad(flow,((0,data_len-length),(0,0),(0,0)),'constant')
             flow[:min(data_len,length)] = flow_temp[:min(data_len,length)]
-
+        except:
+            print("problem with %d flow data"%index)
         segm = np.zeros((data_len,240,320))
-        if(self.__segm[index] != ''):
+        try:
             segm_temp = np.load(self.__segm[index])
             length = len(segm_temp)
             #if(length <= data_len):
             #    segm = np.pad(segm,((0,data_len-length),(0,0),(0,0)),'constant')
             segm[:min(data_len,length)] = segm_temp[:min(data_len,length)]
-        
+        except:
+            print("problem with %d segm data"%index)
         normal = np.zeros((data_len,240,320,3))
-        if(self.__normal[index] != ''):
+        try:
             normal_temp = np.load(self.__normal[index])
             length = len(normal_temp)
             #if(length <= data_len):
             #    normal = np.pad(normal,((0,data_len-length),(0,0),(0,0)),'constant')
             normal[:min(data_len,length)] = normal_temp[:min(data_len,length)]
-
+        except:
+            print("problem with %d normal data"%index)
         #annotation
-        if(self.__annotation[index] != ''):
+        try:
             with open(self.__annotation[index]) as f:
                     annotation = json.load(f)
-                    print(annotation)
-
+        except:
+            print("problem with annotation")
         #images
         img = np.zeros((data_len,240,320,3),dtype=int)
-        if(self.__img[index] != ''):
+        try:
             
             #dimension (H,W,C)
             
@@ -103,20 +107,21 @@ class MotionData(Dataset):
                     img_temp = img_temp.astype(int)
                     img[i] = img_temp
                 #img[i] = torch.from_numpy(img_temp,dtype=torch.int)
-                
+        except:
+            print("problem with %d image"%index)        
             
         # Convert image and label to torch tensors
         depth = torch.from_numpy(np.asarray(depth))
         
-        print('depth',depth.shape)
+        
         flow = torch.from_numpy(np.asarray(flow))
-        print('flow',flow.shape)
+        
         segm = torch.from_numpy(np.asarray(segm))
-        print('segm',segm.shape)
+        
         normal = torch.from_numpy(np.asarray(normal))
-        print('normal',normal.shape)
+        
         img = torch.from_numpy(np.asarray(img))
-        print('image', img.shape)
+        
         return depth,flow,segm,normal,annotation,img
 
     # Override to give PyTorch size of dataset
@@ -133,23 +138,23 @@ def main():
         idx = i * 10
         image = img.numpy()[0,idx,:,:,:]
         
-        plt.imshow(image)
+        ax0 = plt.subplot(231)
+        ax0.imshow(image)
         # plt.show()
-        plt.waitforbuttonpress()
         #plt.savefig('render/image%d.png'%i)
         #print(image)
         #plt.close()
-        ax1 = plt.subplot(221)
+        ax1 = plt.subplot(232)
         ax1.imshow(depth.numpy()[0,idx,:,:])
         #plt.show()
         #plt.waitforbuttonpress()
         #plt.savefig('render/depth%d.png'%i)
-        ax2 = plt.subplot(222)
+        ax2 = plt.subplot(233)
         ax2.imshow(segm.numpy()[0,idx,:,:])
         #plt.show()
-        ax3 = plt.subplot(223)
+        ax3 = plt.subplot(234)
         ax3.imshow(flow.numpy()[0,idx,:,:,0])
-        ax4 = plt.subplot(224)
+        ax4 = plt.subplot(235)
         ax4.imshow(normal.numpy()[0,idx,:,:,:])
         plt.waitforbuttonpress()
         #plt.savefig('render/segm%d.png'%i)
