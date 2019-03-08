@@ -46,10 +46,8 @@ class MotionData(Dataset):
 
     # Override to give PyTorch access to any image on the dataset
     def __getitem__(self, index):
-        try:
-            h5f = h5py.File(self.__data[index],'r')
-        except:
-            print('datafile not found')
+        
+        h5f = h5py.File(self.__data[index],'r')
         data_len = 130
         depth= np.zeros((data_len,240,320))
         try:
