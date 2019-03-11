@@ -723,8 +723,8 @@ def main():
     nframes = len(poses)
 
     #matfile_info = join(output_path, name.replace(" ", "") + "_c%04d_info.mat" % (ishape+1))
-    matfile_info = join(output_path, "%d_c%04d_info.mat" % (idx,ishape+1))
-    log_message('Working on %s' % matfile_info)
+    h5file_info = join(output_path, "%d_c%04d_info.h5" % (idx,ishape+1))
+    log_message('Working on %s' % h5file_info)
 
     # allocate
     dict_info = {}
@@ -917,8 +917,14 @@ def main():
     os.system(cmd_tar)
     
     # save annotation excluding png/exr data to _info.mat file
-    import scipy.io
-    scipy.io.savemat(matfile_info, dict_info, do_compression=True)
+    #import scipy.io
+    #scipy.io.savemat(matfile_info, dict_info, do_compression=True)
+    
+    #save info to h5py file
+    import h5py
+    h5f = h5py.File(h5file_info, 'w')
+    h5f.create_dataset('joints2D', data=dict_info['joints2D'])
+    h5f.close()
 
 if __name__ == '__main__':
     main()
