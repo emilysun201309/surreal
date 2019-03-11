@@ -1,0 +1,3 @@
+[submodule "vendor/pyMMM"]
+	path = vendor/pyMMM
+	url = https://gitlab.com/cmandery/pyMMM.git
