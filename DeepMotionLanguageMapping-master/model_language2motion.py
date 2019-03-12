@@ -617,6 +617,7 @@ def data_generator(X_language, X_motion, Y, nb_vocabulary, nb_joints, args):
         
         # Process batch by batch.
         for batch_idx in xrange(nb_batches):
+            print('idx',batch_idx)
             start_idx = batch_idx * args.batch_size
             indexes = perm[start_idx:start_idx + args.batch_size]
             batch_X_l = X_language[indexes]
