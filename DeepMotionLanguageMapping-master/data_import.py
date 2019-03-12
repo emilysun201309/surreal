@@ -99,6 +99,7 @@ def main(args):
 	all_annotations = []
 	reference_joint_names = None
 	for idx, basename in enumerate(basenames):
+		print(basename)
 		print('  {}/{} ...'.format(idx + 1, len(basenames))),
 
 		# Load motion.

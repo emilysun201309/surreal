@@ -17,7 +17,7 @@ from keras.layers import (Input, LSTM, GRU, Dense, merge, TimeDistributed, Repea
 from keras.models import Model
 from keras.utils.generic_utils import Progbar
 from keras.callbacks import History, ModelCheckpoint
-from keras.utils.visualize_util import plot
+#from keras.utils.visualize_util import plot
 from keras.optimizers import get as get_optimizer
 from keras.regularizers import l2
 from keras import metrics, objectives
@@ -718,8 +718,8 @@ def train(args):
     print('Saving model information to "{}" ...'.format(output_path))
     with open(os.path.join(output_path, 'model.json'), 'w') as f:
         f.write(model.to_json())
-    plot(model, to_file=os.path.join(output_path, 'model.pdf'), show_shapes=True)
-    plot(model, to_file=os.path.join(output_path, 'model.dot'), show_shapes=True)
+    #plot(model, to_file=os.path.join(output_path, 'model.pdf'), show_shapes=True)
+    #plot(model, to_file=os.path.join(output_path, 'model.dot'), show_shapes=True)
     with open(os.path.join(output_path, 'train_args.json'), 'w') as f:
         dump_data(serializable_args(args), f, args)
     with open(os.path.join(output_path, 'train_optimizer.json'), 'w') as f:

@@ -202,10 +202,10 @@ def process_annotations(tokenized_annotations, maxlen, vocabulary, args):
 
     # Add start and stop symbols to inputs.
     print('Adding start, stop and padding symbols to annotation inputs ...')
-    for annotation in annotation_inputs:
+    for annotation in vectorized_annotations:
         annotation.insert(0, start_idx)
         annotation.append(end_idx)
-    annotation_inputs = pad_sequences(annotation_inputs, padding='pre', value=padding_idx, maxlen=maxlen + 2)
+    annotation_inputs = pad_sequences(vectorized_annotations, padding='pre', value=padding_idx, maxlen=maxlen + 2)
     print('done, annotation inputs = {}'.format(annotation_inputs.shape))
     print('')
 
@@ -344,8 +344,8 @@ def main(args):
     # set.
     print('Tokenizing annotations ...')
     tokenized_annotations = []
-    if os.path.exists('data/corrections.pkl'):
-        with open('data/corrections.pkl', 'rb') as f:
+    if os.path.exists('corrections.pkl'):
+        with open('corrections.pkl', 'rb') as f:
             confirmed_corrections = pickle.load(f)
     else:
         confirmed_corrections = {}
@@ -376,7 +376,7 @@ def main(args):
                 corrected_tokens.extend(tokenize(correction))
             inner_tokenized_annotations.append(corrected_tokens)
         tokenized_annotations.append(inner_tokenized_annotations)
-    with open('data/corrections.pkl', 'wb') as f:
+    with open('corrections.pkl', 'wb') as f:
         pickle.dump(confirmed_corrections, f)
     print('done')
     print('')
