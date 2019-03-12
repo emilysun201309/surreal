@@ -5,7 +5,7 @@ import csv
 
 
 csv_out = open("files.csv", 'w') 
-fieldnames = ['data','annotation','img']
+fieldnames = ['data','annotation','img','keypoint']
 writer = csv.DictWriter(csv_out,fieldnames=fieldnames)
 writer.writeheader()
 for subdir, dirs, files in os.walk("out/"):
@@ -16,6 +16,8 @@ for subdir, dirs, files in os.walk("out/"):
       for file in os.listdir(directory):
           if file.endswith("data.h5"):
             data = os.path.join(directory, file)
+          if file.endswith("info.h5")
+            keypoint = os.path.join(directory,file)
           '''
           if file.endswith("gtflow.npy"):
             flow = os.path.join(directory, file)
@@ -33,6 +35,6 @@ for subdir, dirs, files in os.walk("out/"):
           if file.endswith(".mp4.tar.gz"):
             img = os.path.join(directory,file)
             
-      writer.writerow({'data':data,'annotation': annotation,'img':img})
+      writer.writerow({'data':data,'annotation': annotation,'img':img,'keypoint':keypoint})
 
           

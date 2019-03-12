@@ -24,6 +24,7 @@ class MotionData(Dataset):
     __data = []
     __annotation = []
     __img = []
+    __keypoint = []
 
     def __init__(self, folder_dataset, transform=None):
         self.transform = transform
@@ -44,6 +45,7 @@ class MotionData(Dataset):
                 self.__annotation.append(row['annotation'])
                 #image path
                 self.__img.append(row['img'])
+                self.__keypoint.append(row['keypoint'])
 
     # Override to give PyTorch access to any image on the dataset
     def __getitem__(self, index):
@@ -117,7 +119,20 @@ class MotionData(Dataset):
                 #img[i] = torch.from_numpy(img_temp,dtype=torch.int)
         except:
             print("problem with %d image"%index)        
-            
+
+        #keypoint
+        h5f_keypoint = h5py.File(self.__keypoint[index],'r')
+
+        keypoint = np.zeros((2,43,data_len))
+        try:
+            keypoint_temp = h5f_keypoint['joints2D'][:] 
+            length = len(keypoint_temp.shape[2])
+            #if(length <= data_len):
+            #    normal = np.pad(normal,((0,data_len-length),(0,0),(0,0)),'constant')
+            keypoint[:,:,:min(data_len,length)] = keypoint_temp[:,:,:min(data_len,length)]
+        except:
+            print("problem with %d keypoint data"%index)
+   
         # Convert image and label to torch tensors
         depth = torch.from_numpy(np.asarray(depth))
         
@@ -129,8 +144,10 @@ class MotionData(Dataset):
         normal = torch.from_numpy(np.asarray(normal))
         
         img = torch.from_numpy(np.asarray(img))
+
+        keypoint = torch.from_numpy(np.asarray(keypoint))
         
-        return depth,flow,segm,normal,annotation,img
+        return depth,flow,segm,normal,annotation,img,keypoint
 
     # Override to give PyTorch size of dataset
     def __len__(self):
@@ -139,7 +156,7 @@ class MotionData(Dataset):
 def main():
     dset_train = MotionData(FOLDER_DATASET)
     train_loader = DataLoader(dset_train, batch_size=1, shuffle=True, num_workers=1)
-    depth,flow,segm,normal,annotation,img = next(iter(train_loader))
+    depth,flow,segm,normal,annotation,img,keypoint = next(iter(train_loader))
     print('Batch shape:',depth.numpy().shape, flow.numpy().shape,img.numpy().shape)
     frames = int(img.numpy().shape[1]/10)  
     for i in range(frames):
@@ -152,6 +169,12 @@ def main():
         #plt.savefig('render/image%d.png'%i)
         #print(image)
         #plt.close()
+        joints_loc = keypoint[:,:,i]
+        ax0.plot(joints_loc[0,:], 240-joints_loc[1,:], 'r+')
+        #plt.savefig('image%d.png'%f)
+        #plt.close()
+
+
         ax1 = plt.subplot(232)
         ax1.imshow(depth.numpy()[0,idx,:,:])
         #plt.show()
