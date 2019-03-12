@@ -9,7 +9,7 @@ import warnings
 
 import h5py
 import numpy as np; np.random.seed(42)
-numpy.__version__
+np.__version__
 from tabulate import tabulate
 import matplotlib.pyplot as plt
 
