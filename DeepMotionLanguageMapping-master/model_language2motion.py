@@ -738,10 +738,12 @@ def train(args):
         train_gen = data_generator(X_language_train, X_motion_train, Y_train, nb_vocabulary, nb_joints, args)
         valid_gen, nb_val_samples = None, None
         if valid_data:
+            print('valid data')
             (X_language_valid, X_motion_valid), Y_valid = valid_data
             valid_gen = data_generator(X_language_valid, X_motion_valid, Y_valid, nb_vocabulary, nb_joints, args)
             nb_val_samples = X_language_valid.shape[0]
         samples_per_epoch = X_language_train.shape[0]
+        print('start model.fit_generator')
         model.fit_generator(train_gen, samples_per_epoch, nb_epoch=args.nb_epoch, validation_data=valid_gen,
             callbacks=[history, checkpoint], nb_val_samples=nb_val_samples)
     except KeyboardInterrupt:
