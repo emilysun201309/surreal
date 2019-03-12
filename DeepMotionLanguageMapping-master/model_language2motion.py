@@ -747,7 +747,7 @@ def train(args):
     except KeyboardInterrupt:
         pass
     except Exception as e:
-        print(e)
+        print('error',e)
     finally:
         duration = timeit.default_timer() - start
         print('')
