@@ -9,7 +9,7 @@ import warnings
 
 import h5py
 import numpy as np; np.random.seed(42)
-np.__version__
+print(np.__version__)
 from tabulate import tabulate
 import matplotlib.pyplot as plt
 
@@ -737,7 +737,7 @@ def train(args):
     print('Training ...')
     try:
         train_gen = data_generator(X_language_train, X_motion_train, Y_train, nb_vocabulary, nb_joints, args)
-        print(type(train_data))
+        print(type(train_gen))
         valid_gen, nb_val_samples = None, None
         if valid_data:
             print('valid data')
