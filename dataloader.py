@@ -171,7 +171,7 @@ def main():
         #plt.savefig('render/image%d.png'%i)
         #print(image)
         #plt.close()
-        joints_loc = keypoint[:,:,i]
+        joints_loc = keypoint[0,:,:,idx]
         print('joints shape',joints_loc.shape)
         ax0.plot(joints_loc[0,:], 240-joints_loc[1,:], 'r+')
         #plt.savefig('image%d.png'%f)
