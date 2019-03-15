@@ -175,7 +175,7 @@ def main():
         print('joints shape',joints_loc.shape)
         ax0.plot(joints_loc[0,:], 240-joints_loc[1,:], 'r+')
         #plt.savefig('image%d.png'%f)
-        #plt.close()
+        
 
 
         ax1 = plt.subplot(232)
@@ -192,6 +192,6 @@ def main():
         ax4.imshow(normal.numpy()[0,idx,:,:,:])
         plt.waitforbuttonpress()
         #plt.savefig('render/segm%d.png'%i)
-        #plt.close()
+        plt.close()
 if __name__ == '__main__':
     main()
