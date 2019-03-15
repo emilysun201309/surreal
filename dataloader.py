@@ -158,6 +158,7 @@ def main():
     dset_train = MotionData(FOLDER_DATASET)
     train_loader = DataLoader(dset_train, batch_size=1, shuffle=True, num_workers=1)
     depth,flow,segm,normal,annotation,img,keypoint = next(iter(train_loader))
+    print("keypoint shape",keypoint.shape)
     print('Batch shape:',depth.numpy().shape, flow.numpy().shape,img.numpy().shape)
     frames = int(img.numpy().shape[1]/10)  
     for i in range(frames):
