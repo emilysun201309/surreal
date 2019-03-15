@@ -16,7 +16,7 @@ for subdir, dirs, files in os.walk("out/"):
       for file in os.listdir(directory):
           if file.endswith("data.h5"):
             data = os.path.join(directory, file)
-          if file.endswith("info.h5")
+          if file.endswith("info.h5"):
             keypoint = os.path.join(directory,file)
           '''
           if file.endswith("gtflow.npy"):
