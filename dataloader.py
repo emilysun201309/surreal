@@ -127,7 +127,7 @@ class MotionData(Dataset):
         try:
             keypoint_temp = h5f_keypoint['joints2D'][:]
             print('keypoint shape',keypoint_temp.shape)
-            length = len(keypoint_temp.shape[2])
+            length = keypoint_temp.shape[2]
             #if(length <= data_len):
             #    normal = np.pad(normal,((0,data_len-length),(0,0),(0,0)),'constant')
             keypoint[:,:,:min(data_len,length)] = keypoint_temp[:,:,:min(data_len,length)]
