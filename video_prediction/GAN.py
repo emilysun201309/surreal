@@ -803,7 +803,7 @@ def train_step(X,Y,D_m,D_a, G, D_m_solver,D_a_solver, G_solver,batch_size=2,num_
     d_m_loss_aux = discriminator_loss_aux(y_m,y_m_prime,v_r,v_f,v_f_prime,l_r,l_f,l_f_prime)
     
     #TODO:verify '-' in paper
-    d_m_loss += d_m_loss_aux
+    #d_m_loss += d_m_loss_aux
     
     d_m_loss.backward()
     D_m_solver.step()
@@ -844,8 +844,10 @@ def train_step(X,Y,D_m,D_a, G, D_m_solver,D_a_solver, G_solver,batch_size=2,num_
     G_loss_m = G_loss_m.mean()
     #TODO: add ranking loss for motion
     
-    G_loss = G_loss_a + G_loss_aux + G_rank_loss_a + G_loss_m
-    
+    #G_loss = G_loss_a + G_loss_aux + G_rank_loss_a + G_loss_m
+    G_loss = G_loss_a + G_loss_m
+    #train with just G_loss itself
+
     
     #torch.clamp(0.0001-d1_neg+d1_pos,max=0) + torch.clamp(0.0001-d2_neg+d2_pos,max=0)
         
@@ -878,6 +880,7 @@ def train(train_loader,batch_size,T,q,p,c,num_epochs,device):
             y_m_l = y_m['label']
             y_m_l = y_m_l.type(torch.FloatTensor)
             y_m_v = y_m['velocity']
+            
             y_m_v = y_m_v.type(torch.FloatTensor)
              #shuffle y_a to get y_a',y_m
             r=torch.randperm(batch_size)
