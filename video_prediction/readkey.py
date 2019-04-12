@@ -2,7 +2,7 @@
 import csv
 import pandas as pd
 import h5py  
-PATH = 'naptops/data/tracking_results2/'
+PATH = 'natops/data/tracking_results2/'
 
 def read_csv(subject, gesture):
     '''
