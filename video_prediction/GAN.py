@@ -907,7 +907,7 @@ def train(train_loader,batch_size,T,q,p,c,num_epochs,device):
         
 
 def main():
-    dset_train = NATOPSData("videos/reshaped.hdf5","segmentation.txt","keypoints.h5")
+    dset_train = NATOPSData("videos/reshaped.hdf5","natops/data/segmentation.txt","keypoints.h5")
     train_loader = DataLoader(dset_train, batch_size=10, shuffle=True, num_workers=1)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     
