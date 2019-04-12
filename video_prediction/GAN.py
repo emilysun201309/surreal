@@ -387,14 +387,14 @@ class Generator(nn.Module):
         e_out = self.encode4(e3)
         initial_states = []
         #TODO: check if initial cell state is 0?
-        print(e_out.size())
+        #print(e_out.size())
         initial_cell = Variable(torch.zeros_like(e_out))
         initial_states.append((e_out,initial_cell))
-        print(y_v.size())
+        #print(y_v.size())
         
         lstm_out,_ = self.lstm(y_v, initial_states)
         #lstm_out (N,T,256,8,8)
-        print('lstm_out size', len(lstm_out),lstm_out[0].size())
+        #print('lstm_out size', len(lstm_out),lstm_out[0].size())
         lstm_out = lstm_out[0]
         
         #create random noise z
@@ -579,7 +579,7 @@ class Motion_D(nn.Module):
         #y_m_l output (label predicted)
         
         #concatenate y_l and h_out
-        print('yl',y_l.shape)
+        #print('yl',y_l.shape)
         y_l = y_l.view(N,-1,1,1).repeat(1,1,4,4)
         #print('y_l shape ', y_l.size())
         predict = torch.cat((y_l,h_out),1)
@@ -606,7 +606,7 @@ class Motion_D(nn.Module):
             k_out = F.tanh(k_out)
             #print('k_out each time step',k_out.size())
             keypoints[:,t,:] = k_out
-        print(keypoints.size())
+        #print(keypoints.size())
         return predict_out, keypoints,l_out
         
         
@@ -852,7 +852,7 @@ def train_step(X,Y,D_m,D_a, G, D_m_solver,D_a_solver, G_solver,batch_size=2,num_
     G_loss.backward()
     G_solver.step()
     
-    return G_loss,d_m_loss,d_a_loss
+    return G_loss,d_m_loss,d_a_loss,d_m_loss_aux,G_loss_a,G_loss_aux,G_rank_loss_a,G_loss_m
     
     
 
@@ -898,13 +898,12 @@ def train(train_loader,batch_size,T,q,p,c,num_epochs,device):
             #y_m_prime = y_m_prime.to(device)
             Y = ((y_a,y_m),(y_a_prime,y_m),(y_a,y_m_prime))
             
-            G_loss,d_m_loss,d_a_loss = train_step(X,Y,D_m,D_a, G, D_m_solver,
+            G_loss,d_m_loss,d_a_loss,d_m_loss_aux,G_loss_a,G_loss_aux,G_rank_loss_a,G_loss_m = train_step(X,Y,D_m,D_a, G, D_m_solver,
                                                   D_a_solver, G_solver, batch_size,num_epochs,q,p)
             if(step%100==0):
-                print("step%d G_loss%.3f d_m_loss%.3f d_a_loss%.3f" %(step,G_loss.item(),d_m_loss.item(),
-                                                                     d_a_loss.item()))
+                print("step%d G_loss%.3f d_m_loss%.3f d_a_loss%.3f d_m_loss_aux%.3f G_loss_a%.3f G_loss_aux%.3f G_rank_loss_a%.3f G_loss_m%.3f" %(step,G_loss.item(),d_m_loss.item(),
+                                                                     d_a_loss.item(),d_m_loss_aux.item(),G_loss_a.item(), G_loss_aux.item(),G_rank_loss_a.item(),G_loss_m.item()))
             
-        
 
 def main():
     dset_train = NATOPSData("videos/reshaped.hdf5","natops/data/segmentation.txt","keypoints.h5")
