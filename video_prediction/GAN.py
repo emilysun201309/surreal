@@ -726,7 +726,7 @@ def discriminator_loss(logits_r,logits_m,logits_f,logits_f_prime):
     ###########################
     loss = None
     loss = torch.log(logits_r) + 0.5*(torch.log(1-logits_m)+0.5*(torch.log(1-logits_f)+torch.log(1-logits_f_prime)))
-    loss = loss.mean()
+    loss = -loss.mean()
     return loss
 
 
@@ -803,7 +803,7 @@ def train_step(X,Y,D_m,D_a, G, D_m_solver,D_a_solver, G_solver,batch_size=2,num_
     d_m_loss_aux = discriminator_loss_aux(y_m,y_m_prime,v_r,v_f,v_f_prime,l_r,l_f,l_f_prime)
     
     #TODO:verify '-' in paper
-    #d_m_loss += d_m_loss_aux
+    d_m_loss += d_m_loss_aux
     
     d_m_loss.backward()
     D_m_solver.step()
@@ -845,7 +845,7 @@ def train_step(X,Y,D_m,D_a, G, D_m_solver,D_a_solver, G_solver,batch_size=2,num_
     #TODO: add ranking loss for motion
     
     #G_loss = G_loss_a + G_loss_aux + G_rank_loss_a + G_loss_m
-    G_loss = G_loss_a + G_loss_m
+    G_loss = -(G_loss_a + G_loss_m)
     #train with just G_loss itself
 
     
@@ -903,7 +903,7 @@ def train(train_loader,batch_size,T,q,p,c,num_epochs,device):
             
             G_loss,d_m_loss,d_a_loss,d_m_loss_aux,G_loss_a,G_loss_aux,G_rank_loss_a,G_loss_m = train_step(X,Y,D_m,D_a, G, D_m_solver,
                                                   D_a_solver, G_solver, batch_size,num_epochs,q,p)
-            if(step%100==0):
+            if(step%1==0):
                 print("step%d G_loss%.3f d_m_loss%.3f d_a_loss%.3f d_m_loss_aux%.3f G_loss_a%.3f G_loss_aux%.3f G_rank_loss_a%.3f G_loss_m%.3f" %(step,G_loss.item(),d_m_loss.item(),
                                                                      d_a_loss.item(),d_m_loss_aux.item(),G_loss_a.item(), G_loss_aux.item(),G_rank_loss_a.item(),G_loss_m.item()))
             
