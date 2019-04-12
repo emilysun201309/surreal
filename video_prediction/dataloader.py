@@ -17,9 +17,13 @@ from readvideo import parse_seg,readvideo
 import math
 
 
-
+'''
 VIDEO_DATASET = "videos/reshaped.hdf5"
 SEG_PATH = "segmentation.txt"
+KEYPOINTS = "keypoints.h5"
+'''
+VIDEO_DATASET = "videos/reshaped.hdf5"
+SEG_PATH = "natops/data/segmentation.txt"
 KEYPOINTS = "keypoints.h5"
 
 class NATOPSData(Dataset):
