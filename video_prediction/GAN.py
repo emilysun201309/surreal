@@ -7,7 +7,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from dataloader import NATOPSData
-
+from tensorboardX import SummaryWriter
 
 class Encoder(nn.Module):
 
@@ -854,7 +854,7 @@ def train_step(X,Y,D_m,D_a, G, D_m_solver,D_a_solver, G_solver,batch_size=2,num_
     G_loss.backward()
     G_solver.step()
     
-    return G_loss,d_m_loss,d_a_loss,d_m_loss_aux,G_loss_a,G_loss_aux,G_rank_loss_a,G_loss_m
+    return G_loss,d_m_loss,d_a_loss,d_m_loss_aux,G_loss_a,G_loss_aux,G_rank_loss_a,G_loss_m,x_hat_y
     
     
 
@@ -866,6 +866,9 @@ def train(train_loader,batch_size,T,q,p,c,num_epochs,device):
     G_solver = optim.Adam(G.parameters(), lr=1e-3,betas=(0.5, 0.999))
     D_m_solver = optim.Adam(D_m.parameters(), lr=1e-3,betas=(0.5, 0.999))
     D_a_solver = optim.Adam(D_a.parameters(), lr=1e-3,betas=(0.5, 0.999))
+
+    #initialize tensorboardX
+    writer = SummaryWriter('runs/exp-1')
     
     for epoch in range(num_epochs):  # TODO decide epochs
         print('-----------------Epoch = %d-----------------' % (epoch + 1))
@@ -901,8 +904,17 @@ def train(train_loader,batch_size,T,q,p,c,num_epochs,device):
             #y_m_prime = y_m_prime.to(device)
             Y = ((y_a,y_m),(y_a_prime,y_m),(y_a,y_m_prime))
             
-            G_loss,d_m_loss,d_a_loss,d_m_loss_aux,G_loss_a,G_loss_aux,G_rank_loss_a,G_loss_m = train_step(X,Y,D_m,D_a, G, D_m_solver,
+            G_loss,d_m_loss,d_a_loss,d_m_loss_aux,G_loss_a,G_loss_aux,G_rank_loss_a,G_loss_m,x_hat_y = train_step(X,Y,D_m,D_a, G, D_m_solver,
                                                   D_a_solver, G_solver, batch_size,num_epochs,q,p)
+            
+            writer.add_scalar('G_loss', G_loss.item(), step)
+            writer.add_scalar('d_m_loss', d_m_loss.item(), step)
+            writer.add_scalar('d_a_loss', d_a_loss.item(), step)
+            writer.add_scalar('d_m_loss_aux', d_m_loss_aux.item(), step)
+            writer.add_image('X1', x_hat_y[0,0,:,:,:], iteration)
+            writer.add_image('X1', x_hat_y[1,0,:,:,:], iteration)
+            writer.add_image('X1', x_hat_y[2,0,:,:,:], iteration)
+            writer.add_image('X1', x_hat_y[7,0,:,:,:], iteration)
             if(step%1==0):
                 print("step%d G_loss%.3f d_m_loss%.3f d_a_loss%.3f d_m_loss_aux%.3f G_loss_a%.3f G_loss_aux%.3f G_rank_loss_a%.3f G_loss_m%.3f" %(step,G_loss.item(),d_m_loss.item(),
                                                                      d_a_loss.item(),d_m_loss_aux.item(),G_loss_a.item(), G_loss_aux.item(),G_rank_loss_a.item(),G_loss_m.item()))
