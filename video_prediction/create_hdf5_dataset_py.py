@@ -55,6 +55,9 @@ def save_video_to_hdf5(h5_file_handle, video_path):
         print(centers.shape)
         print(len(frame_file_names))
         for t, file in enumerate(frame_file_names[:-2]):
+            if(t >= centers.shape[0]){
+                break;
+            }
             w,h = centers[t]
             
             h = max(90,h)
