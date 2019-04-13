@@ -65,7 +65,7 @@ class NATOPSData(Dataset):
         keypoint = np.zeros((self.data_len,18))
         
         motion_temp,keypoint_temp = readvideo(self.motion_video_path,subject_idx, gesture_idx, numOfRepeat,self.seg_list,self.keypoints)
-        length = len(motion_temp)
+        length = min(len(keypoint_temp),len(motion_temp))
         center_x = keypoint_temp[:,2]
         center_x = center_x.reshape((-1,1))
         center_y = keypoint_temp[:,3]
@@ -95,7 +95,7 @@ class NATOPSData(Dataset):
 
     # Override to give PyTorch size of dataset
     def __len__(self):
-        return 24
+        return 9600
 
 def main():
     batch_size = 2
