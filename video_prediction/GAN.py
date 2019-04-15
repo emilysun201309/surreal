@@ -501,12 +501,13 @@ class Motion_D(nn.Module):
         #y_l (c*4*4) ??
         #x (3*64*64)
         self.q = q
-        self.encoder = nn.Sequential(
+        self.encoder1 = nn.Sequential(
             nn.Conv2d(3,64,kernel_size,stride=2,padding=1),
             nn.LeakyReLU(),
             nn.Conv2d(64,128,kernel_size,stride=2,padding=1),
             nn.BatchNorm2d(128,affine=False),
-            nn.LeakyReLU(),
+            nn.LeakyReLU())
+        self.encoder2 = nn.Sequential(
             nn.Conv2d(128,256,kernel_size,stride=2,padding=1),
             nn.BatchNorm2d(256,affine=False),
             nn.LeakyReLU())
@@ -549,8 +550,12 @@ class Motion_D(nn.Module):
         #y_l = (N,C)
         x = x.view(-1,3,64,64)
         
-        x_encoded = self.encoder(x)
-        y_encoded = self.encoder(y_a)
+        x_encoded_1 = self.encoder1(x)
+        layer1_out = x_encoded_1.view(N,T,128,16,16)
+        x_encoded = self.encoder2(x_encoded_1)
+
+        y_encoded_1 = self.encoder1(y_a)
+        y_encoded = self.encoder2(y_encoded_1)
         
         x_encoded = x_encoded.view(N,T,256,8,8)
         
@@ -607,7 +612,7 @@ class Motion_D(nn.Module):
             #print('k_out each time step',k_out.size())
             keypoints[:,t,:] = k_out
         #print(keypoints.size())
-        return predict_out, keypoints,l_out
+        return predict_out, keypoints,l_out,layer1_out,x_encoded
         
         
         
@@ -744,11 +749,14 @@ def discriminator_loss_aux(y_m,y_m_prime,v_r,v_f,v_f_prime,l_r,l_f,l_f_prime):
     #one_hot encode to scalar
     y_l = (y_l == 1).nonzero()[:,1]
     
+    print('label shape', l_r.size(), l_f.size(),l_f_prime.size(),y_l.size())
+    print("v shape", y_v.size(), y_v_prime.size(), v_r.size(),v_f.size())
+    
     LMSE = F.mse_loss(y_v,v_r) + F.mse_loss(y_v,v_f)+ F.mse_loss(y_v_prime,v_f_prime)
     
     LCE = F.cross_entropy(l_r, y_l) + F.cross_entropy(l_f, y_l) + F.cross_entropy(l_f_prime, y_l)
     
-    return LMSE + LCE
+    return LMSE - LCE
     
 
 
@@ -793,19 +801,19 @@ def train_step(X,Y,D_m,D_a, G, D_m_solver,D_a_solver, G_solver,batch_size=2,num_
     
     #train discriminator m
     D_m_solver.zero_grad()
-    s_r_m,v_r,l_r = D_m(x_y,y_a,y_m)
-    s_f_m,v_f,l_f = D_m(x_hat_y,y_a,y_m)
-    s_m_m,v_m,l_m = D_m(x_y,y_a,y_m_prime)
-    s_f_prime_m,v_f_prime,l_f_prime = D_m(x_hat_y_m,y_a,y_m_prime)
+    s_r_m,v_r,l_r,_,_ = D_m(x_y,y_a,y_m)
+    s_f_m,v_f,l_f,_,_ = D_m(x_hat_y,y_a,y_m)
+    s_m_m,v_m,l_m,_,_ = D_m(x_y,y_a,y_m_prime)
+    s_f_prime_m,v_f_prime,l_f_prime,_,_ = D_m(x_hat_y_m,y_a,y_m_prime)
     
     d_m_loss = discriminator_loss(s_r_m,s_m_m,s_f_m,s_f_prime_m)
     
     d_m_loss_aux = discriminator_loss_aux(y_m,y_m_prime,v_r,v_f,v_f_prime,l_r,l_f,l_f_prime)
     
     #TODO:verify '-' in paper
-    d_m_loss += d_m_loss_aux
+    d_m_loss_sum = d_m_loss + d_m_loss_aux
     
-    d_m_loss.backward()
+    d_m_loss_sum.backward()
     D_m_solver.step()
     
     
@@ -818,9 +826,9 @@ def train_step(X,Y,D_m,D_a, G, D_m_solver,D_a_solver, G_solver,batch_size=2,num_
     
     #using appearance discriminator
     discriminator_type = 'a'
-    _,r_l1_a,r_l2_a = D_a(x_y,y_a)
-    s_f_a,f_l1_a,f_l2_a = D_a(x_hat_y_a,y_a)
-    s_f_prime_a, f_prime_l1_a,f_prime_l2_a = D_a(x_hat_y_a,y_a_prime)
+    _,r_l1_a,r_l2_a = D_a(x_y,y_a).detach()
+    s_f_a,f_l1_a,f_l2_a = D_a(x_hat_y_a,y_a).detach()
+    s_f_prime_a, f_prime_l1_a,f_prime_l2_a = D_a(x_hat_y_a,y_a_prime).detach()
     
     #(x|y,y),(x_hat|y,y),(x_hat|y',y')
     d_a_1 = (r_l1_a,f_l1_a,f_prime_l1_a)
@@ -836,17 +844,23 @@ def train_step(X,Y,D_m,D_a, G, D_m_solver,D_a_solver, G_solver,batch_size=2,num_
     
     #using motion discriminator
     discriminator_type = 'm'
-    #_,v_r,l_r = D_m(x_y,y_a,y_m).detach()
-    s_f_m,v_f,l_f = D_m(x_hat_y,y_a,y_m)
-    s_f_prime_m,v_f_prime,l_f_prime = D_m(x_hat_y_m,y_a,y_m_prime)
+    _,v_r,l_r,r_l1_m,r_l2_m = D_m(x_y,y_a,y_m).detach()
+    s_f_m,v_f,l_f,f_l1_m,f_l2_m = D_m(x_hat_y,y_a,y_m).detach()
+    s_f_prime_m,v_f_prime,l_f_prime,f_prime_l1_m,f_prime_l2_m = D_m(x_hat_y_m,y_a,y_m_prime)
     
+    d_m_1 = (r_l1_m,f_l1_m,f_prime_l1_m)
+    d_m_2 = (r_l2_m,f_l2_m,f_prime_l2_m)
+    d1_pos_m, d1_neg_m,d2_pos_m,d2_neg_m = ranking_loss(discriminator_type,d_m_1,d_m_2,None,None)
+
     G_loss_m = s_f_m.log() + s_f_prime_m.log()
     G_loss_m = G_loss_m.mean()
-    #TODO: add ranking loss for motion
     
-    #G_loss = G_loss_a + G_loss_aux + G_rank_loss_a + G_loss_m
-    G_loss = -(G_loss_a + G_loss_m)
-    #train with just G_loss itself
+    G_loss_aux += (d1_pos_m + d2_pos_m)
+
+    G_rank_loss_m = torch.clamp(0.001-d1_neg_m+d1_pos_m,max=0) + torch.clamp(0.001-d2_neg_m+d2_pos_m,max=0)
+
+    
+    G_loss = -(G_loss_a + G_loss_m - G_loss_aux - G_rank_loss_a - G_rank_loss_m)
 
     
     #torch.clamp(0.0001-d1_neg+d1_pos,max=0) + torch.clamp(0.0001-d2_neg+d2_pos,max=0)
@@ -854,7 +868,7 @@ def train_step(X,Y,D_m,D_a, G, D_m_solver,D_a_solver, G_solver,batch_size=2,num_
     G_loss.backward()
     G_solver.step()
     
-    return G_loss,d_m_loss,d_a_loss,d_m_loss_aux,G_loss_a,G_loss_aux,G_rank_loss_a,G_loss_m,x_hat_y
+    return G_loss,d_m_loss,d_a_loss,d_m_loss_aux,G_loss_a,G_loss_aux,G_rank_loss_a,G_loss_m, G_rank_loss_m,x_hat_y
     
     
 
@@ -868,7 +882,7 @@ def train(train_loader,batch_size,T,q,p,c,num_epochs,device):
     D_a_solver = optim.Adam(D_a.parameters(), lr=1e-3,betas=(0.5, 0.999))
 
     #initialize tensorboardX
-    writer = SummaryWriter('runs/exp-1')
+    writer = SummaryWriter('runs/exp-2')
     
     for epoch in range(num_epochs):  # TODO decide epochs
         print('-----------------Epoch = %d-----------------' % (epoch + 1))
@@ -904,17 +918,28 @@ def train(train_loader,batch_size,T,q,p,c,num_epochs,device):
             #y_m_prime = y_m_prime.to(device)
             Y = ((y_a,y_m),(y_a_prime,y_m),(y_a,y_m_prime))
             
-            G_loss,d_m_loss,d_a_loss,d_m_loss_aux,G_loss_a,G_loss_aux,G_rank_loss_a,G_loss_m,x_hat_y = train_step(X,Y,D_m,D_a, G, D_m_solver,
+            G_loss,d_m_loss,d_a_loss,d_m_loss_aux,G_loss_a,G_loss_aux,G_rank_loss_a,G_loss_m, G_rank_loss_m,x_hat_y = train_step(X,Y,D_m,D_a, G, D_m_solver,
                                                   D_a_solver, G_solver, batch_size,num_epochs,q,p)
             
             writer.add_scalar('G_loss', G_loss.item(), step)
             writer.add_scalar('d_m_loss', d_m_loss.item(), step)
             writer.add_scalar('d_a_loss', d_a_loss.item(), step)
             writer.add_scalar('d_m_loss_aux', d_m_loss_aux.item(), step)
-            writer.add_image('X1', x_hat_y[0,0,:,:,:], iteration)
-            writer.add_image('X1', x_hat_y[1,0,:,:,:], iteration)
-            writer.add_image('X1', x_hat_y[2,0,:,:,:], iteration)
-            writer.add_image('X1', x_hat_y[7,0,:,:,:], iteration)
+            writer.add_scalar('G_loss_a', G_loss_a.item(), step)
+            writer.add_scalar('G_loss_aux', G_loss_aux.item(), step)
+            writer.add_scalar('G_rank_loss_a', G_rank_loss_a.item(), step)
+            writer.add_scalar('G_loss_m', G_loss_m.item(), step)
+            writer.add_scalar('G_rank_loss_m', G_rank_loss_m.item(), step)
+
+
+            writer.add_image('X1.0', x_hat_y[0,0,:,:,:], step)
+            writer.add_image('X1.1', x_hat_y[0,5,:,:,:], step)
+            writer.add_image('X1.2', x_hat_y[0,10,:,:,:], step)
+            writer.add_image('X1.3', x_hat_y[0,15,:,:,:], step)
+            writer.add_image('X1.4', x_hat_y[0,20,:,:,:], step)
+            writer.add_image('X2', x_hat_y[2,1,:,:,:], step)
+            writer.add_image('X3', x_hat_y[3,1,:,:,:], step)
+            writer.add_image('X4', x_hat_y[4,1,:,:,:], step)
             if(step%1==0):
                 print("step%d G_loss%.3f d_m_loss%.3f d_a_loss%.3f d_m_loss_aux%.3f G_loss_a%.3f G_loss_aux%.3f G_rank_loss_a%.3f G_loss_m%.3f" %(step,G_loss.item(),d_m_loss.item(),
                                                                      d_a_loss.item(),d_m_loss_aux.item(),G_loss_a.item(), G_loss_aux.item(),G_rank_loss_a.item(),G_loss_m.item()))
