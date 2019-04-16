@@ -835,8 +835,8 @@ def train_step(X,Y,D_m,D_a, G, D_m_solver,D_a_solver, G_solver,batch_size=2,num_
     #4
 
 
-    d_m_loss,d_m_loss_aux = train_D_a(x_y,y_a,D_a,y_m,y_a_prime,x_hat_y,x_hat_y_a, D_a_solver)
-    d_a_loss = train_D_m(x_y,D_m,y_a,y_m,y_m_prime,x_hat_y,x_hat_y_m,D_m_solver)
+    d_a_loss = train_D_a(x_y,y_a,D_a,y_m,y_a_prime,x_hat_y,x_hat_y_a, D_a_solver)
+    d_m_loss,d_m_loss_aux = train_D_m(x_y,D_m,y_a,y_m,y_m_prime,x_hat_y,x_hat_y_m,D_m_solver)
 
     '''
     #train discriminator a
