@@ -388,13 +388,12 @@ class Generator(nn.Module):
         initial_states = []
         #TODO: check if initial cell state is 0?
         #print(e_out.size())
-        initial_cell = Variable(torch.zeros_like(e_out))
-        initial_states.append((e_out,initial_cell))
+        #initial_cell = Variable(torch.zeros_like(e_out))
+        initial_states.append((e_out,e_out))
         #print(y_v.size())
         
         lstm_out,_ = self.lstm(y_v, initial_states)
         #lstm_out (N,T,256,8,8)
-        #print('lstm_out size', len(lstm_out),lstm_out[0].size())
         lstm_out = lstm_out[0]
         
         #create random noise z
@@ -418,13 +417,15 @@ class Appearance_D(nn.Module):
     def __init__(self,kernel_size=4):
         super(Appearance_D, self).__init__()
         #network 1
-        self.network1 = nn.Sequential(
+        self.network1_l1 = nn.Sequential(
             nn.Conv2d(3,64,kernel_size,stride=2,padding=1),
             nn.BatchNorm2d(64,affine=False),
-            nn.LeakyReLU(),
+            nn.LeakyReLU())
+        self.network1_l2 = nn.Sequential(
             nn.Conv2d(64,128,kernel_size,stride=2,padding=1),
             nn.BatchNorm2d(128,affine=False),
-            nn.LeakyReLU(),
+            nn.LeakyReLU())
+        self.network1_l3 = nn.Sequential(
             nn.Conv2d(128,256,kernel_size,stride=2,padding=1),
             nn.BatchNorm2d(256,affine=False),
             nn.LeakyReLU())
@@ -432,15 +433,13 @@ class Appearance_D(nn.Module):
         #network 2
         #input to 2: (256*4,8,8)
         
-        self.network2_l1 = nn.Sequential(
+        self.network2 = nn.Sequential(
             nn.ConvTranspose2d(256*4,256,3,padding=1),
             nn.BatchNorm2d(256,affine=False),
-            nn.LeakyReLU())
-        self.network2_l2 = nn.Sequential(
+            nn.LeakyReLU(),      
             nn.Conv2d(256,512,kernel_size,stride=2,padding=1),
             nn.BatchNorm2d(512,affine=False),
-            nn.LeakyReLU())
-        self.network2_l3 = nn.Sequential(
+            nn.LeakyReLU(),
             nn.Conv2d(512,1024,kernel_size,stride=4),
             nn.BatchNorm2d(1024,affine=False),
             nn.LeakyReLU())
@@ -453,32 +452,42 @@ class Appearance_D(nn.Module):
     def forward(self,x,y_a):
         '''
         -input x(N,T,3,64,64)
-               y(1,3,64,64)
+               y(N,1,3,64,64)
         -output predictions torch tensor of (N)
         '''
         N,T,_,_,_ = x.size()
-        y_out = self.network1(y_a) #(1,256,8,8)
+
+        y_out = self.network1_l1(y_a) #(N,256,8,8)
+        y_out = self.network1_l2(y_out) #(N,256,8,8)
+        y_out = self.network1_l3(y_out) #(N,256,8,8)
+        
+        #print(y_out.size())
         predictions = torch.zeros(N,T-3)
-        layer1_out = torch.zeros(N,T-3,256,8,8)
-        layer2_out = torch.zeros(N,T-3,512,4,4)
+        layer1_out = torch.zeros(N,T-3,64,32,32)
+        layer2_out = torch.zeros(N,T-3,128,16,16)
         for t in range(T-3):
             #x_temp (N,3,64,64)
             x_temp_1 = x[:,t,:,:,:]
             x_temp_2 = x[:,t+1,:,:,:]
             x_temp_3 = x[:,t+2,:,:,:]
-            x_out_1 = self.network1(x_temp_1) #(N,256,8,8)
+            x_in = torch.cat((x_temp_1,x_temp_2,x_temp_3),0)
+            #x_in (3*N,3,64,64)
+
+            x_out_1 = self.network1_l1(x_in) #(3*N,256,8,8)
+            layer1_out[:,t,:,:,:] = x_out_1[:N]
+            x_out_2 = self.network1_l2(x_out_1)
+            layer2_out[:,t,:,:,:] = x_out_2[:N]
             
-            x_out_2 = self.network1(x_temp_2) #(N,256,8,8)
+            x_out = self.network1_l3(x_out_2)
+            #print(x_out.size())
+            x_out_1 = x_out[:N]
+            x_out_2 = x_out[N:2*N]
+            x_out_3 = x_out[2*N:3*N]
             
-            x_out_3 = self.network1(x_temp_3) #(N,256,8,8)
+            #print("sizes", x_out_1.size(), x_out_2.size(), x_out_3.size(), y_out.size())
+
             x_1 = torch.cat((x_out_1,x_out_2,x_out_3,y_out),1) #(N,256*4,8,8)
-            x_2 = self.network2_l1(x_1)
-            layer1_out[:,t,:,:,:] = x_2
-            
-            x_2 = self.network2_l2(x_2)
-            layer2_out[:,t,:,:,:] = x_2
-            
-            x_2 = self.network2_l3(x_2)
+            x_2 = self.network2(x_1)
             
             x_2 = torch.squeeze(x_2) #(N,1024)
             out = self.fc(x_2) #(N,1)
@@ -731,7 +740,7 @@ def discriminator_loss(logits_r,logits_m,logits_f,logits_f_prime):
     ###########################
     loss = None
     loss = torch.log(logits_r) + 0.5*(torch.log(1-logits_m)+0.5*(torch.log(1-logits_f)+torch.log(1-logits_f_prime)))
-    loss = -loss.mean()
+    loss = loss.mean()
     return loss
 
 
@@ -746,18 +755,59 @@ def discriminator_loss_aux(y_m,y_m_prime,v_r,v_f,v_f_prime,l_r,l_f,l_f_prime):
     y_v = y_m['velocity']
     y_v_prime = y_m_prime['velocity']
     y_l = y_m['label']
+    print("y_l before",y_l)
     #one_hot encode to scalar
     y_l = (y_l == 1).nonzero()[:,1]
-    
-    print('label shape', l_r.size(), l_f.size(),l_f_prime.size(),y_l.size())
-    print("v shape", y_v.size(), y_v_prime.size(), v_r.size(),v_f.size())
+    print("y_l", y_l)
     
     LMSE = F.mse_loss(y_v,v_r) + F.mse_loss(y_v,v_f)+ F.mse_loss(y_v_prime,v_f_prime)
+
+    print("LMSE", LMSE)
     
     LCE = F.cross_entropy(l_r, y_l) + F.cross_entropy(l_f, y_l) + F.cross_entropy(l_f_prime, y_l)
+    print("LCE", LCE)
     
     return LMSE - LCE
     
+
+def train_D_a(x_y,y_a,D_a,y_m,y_a_prime,x_hat_y,x_hat_y_a, D_a_solver):
+    #train discriminator a
+    for param in D_a.parameters():
+        param.requires_grad = True
+    D_a_solver.zero_grad()
+    s_r_a,r_l1_a,r_l2_a = D_a(x_y,y_a)
+    s_f_a,f_l1_a,f_l2_a = D_a(x_hat_y,y_a)
+    s_m_a,_,_ = D_a(x_y,y_a_prime)
+    s_f_prime_a,f_prime_l1_a,f_prime_l2_a = D_a(x_hat_y_a,y_a_prime)
+    
+    d_a_loss = discriminator_loss(s_r_a,s_m_a,s_f_a,s_f_prime_a)
+    d_a_loss = -d_a_loss
+    
+    d_a_loss.backward()
+    D_a_solver.step()
+    return d_a_loss
+
+
+def train_D_m(x_y,D_m,y_a,y_m,y_m_prime,x_hat_y,x_hat_y_m,D_m_solver):
+    for param in D_m.parameters():
+        param.requires_grad = True
+    D_m_solver.zero_grad()
+    s_r_m,v_r,l_r,r_l1_m,r_l2_m = D_m(x_y,y_a,y_m)
+    s_f_m,v_f,l_f,f_l1_m,f_l2_m = D_m(x_hat_y,y_a,y_m)
+    s_m_m,v_m,l_m,_,_ = D_m(x_y,y_a,y_m_prime)
+    s_f_prime_m,v_f_prime,l_f_prime,f_prime_l1_m,f_prime_l2_m = D_m(x_hat_y_m,y_a,y_m_prime)
+    
+    d_m_loss = discriminator_loss(s_r_m,s_m_m,s_f_m,s_f_prime_m)
+    
+    d_m_loss_aux = discriminator_loss_aux(y_m,y_m_prime,v_r,v_f,v_f_prime,l_r,l_f,l_f_prime)
+    
+    #TODO:verify '-' in paper
+    d_m_loss_sum = -d_m_loss + d_m_loss_aux
+    
+    d_m_loss_sum.backward()
+    D_m_solver.step()
+    return d_m_loss,d_m_loss_aux
+
 
 
 
@@ -783,28 +833,32 @@ def train_step(X,Y,D_m,D_a, G, D_m_solver,D_a_solver, G_solver,batch_size=2,num_
     x_hat_y_a = G(y_a_prime,y_m,z).detach()
     x_hat_y_m = G(y_a,y_m_prime,z).detach()
     #4
-    
-    
-    
+
+
+    d_m_loss,d_m_loss_aux = train_D_a(x_y,y_a,D_a,y_m,y_a_prime,x_hat_y,x_hat_y_a, D_a_solver)
+    d_a_loss = train_D_m(x_y,D_m,y_a,y_m,y_m_prime,x_hat_y,x_hat_y_m,D_m_solver)
+
+    '''
     #train discriminator a
     D_a_solver.zero_grad()
-    s_r_a,_,_ = D_a(x_y,y_a)
-    s_f_a,_,_ = D_a(x_hat_y,y_a)
+    s_r_a,r_l1_a,r_l2_a = D_a(x_y,y_a)
+    s_f_a,f_l1_a,f_l2_a = D_a(x_hat_y,y_a)
     s_m_a,_,_ = D_a(x_y,y_a_prime)
-    s_f_prime_a,_,_ = D_a(x_hat_y_a,y_a_prime)
+    s_f_prime_a,f_prime_l1_a,f_prime_l2_a = D_a(x_hat_y_a,y_a_prime)
     
     d_a_loss = discriminator_loss(s_r_a,s_m_a,s_f_a,s_f_prime_a)
     
-    d_a_loss.backward()
+    d_a_loss.backward(retain_graph=True)
     D_a_solver.step()
     #TODO:verify Daux is not needed for D_a
     
+    
     #train discriminator m
     D_m_solver.zero_grad()
-    s_r_m,v_r,l_r,_,_ = D_m(x_y,y_a,y_m)
-    s_f_m,v_f,l_f,_,_ = D_m(x_hat_y,y_a,y_m)
+    s_r_m,v_r,l_r,r_l1_m,r_l2_m = D_m(x_y,y_a,y_m)
+    s_f_m,v_f,l_f,f_l1_m,f_l2_m = D_m(x_hat_y,y_a,y_m)
     s_m_m,v_m,l_m,_,_ = D_m(x_y,y_a,y_m_prime)
-    s_f_prime_m,v_f_prime,l_f_prime,_,_ = D_m(x_hat_y_m,y_a,y_m_prime)
+    s_f_prime_m,v_f_prime,l_f_prime,f_prime_l1_m,f_prime_l2_m = D_m(x_hat_y_m,y_a,y_m_prime)
     
     d_m_loss = discriminator_loss(s_r_m,s_m_m,s_f_m,s_f_prime_m)
     
@@ -813,9 +867,9 @@ def train_step(X,Y,D_m,D_a, G, D_m_solver,D_a_solver, G_solver,batch_size=2,num_
     #TODO:verify '-' in paper
     d_m_loss_sum = d_m_loss + d_m_loss_aux
     
-    d_m_loss_sum.backward()
+    d_m_loss_sum.backward(retain_graph=True)
     D_m_solver.step()
-    
+    '''
     
     #generator loss 
     G_solver.zero_grad()
@@ -824,11 +878,23 @@ def train_step(X,Y,D_m,D_a, G, D_m_solver,D_a_solver, G_solver,batch_size=2,num_
     x_hat_y_a = G(y_a_prime,y_m,z)
     x_hat_y_m = G(y_a,y_m_prime,z)
     
+    for param in D_a.parameters():
+        param.requires_grad = False
+
+
+    s_r_a,r_l1_a,r_l2_a = D_a(x_y,y_a)
+    s_f_a,f_l1_a,f_l2_a = D_a(x_hat_y,y_a)
+    s_f_prime_a,f_prime_l1_a,f_prime_l2_a = D_a(x_hat_y_a,y_a_prime)
+
+    for param in D_m.parameters():
+        param.requires_grad = False
+
+    s_r_m,v_r,l_r,r_l1_m,r_l2_m = D_m(x_y,y_a,y_m)
+    s_f_m,v_f,l_f,f_l1_m,f_l2_m = D_m(x_hat_y,y_a,y_m)
+    s_f_prime_m,v_f_prime,l_f_prime,f_prime_l1_m,f_prime_l2_m = D_m(x_hat_y_m,y_a,y_m_prime)
+    
     #using appearance discriminator
     discriminator_type = 'a'
-    _,r_l1_a,r_l2_a = D_a(x_y,y_a).detach()
-    s_f_a,f_l1_a,f_l2_a = D_a(x_hat_y_a,y_a).detach()
-    s_f_prime_a, f_prime_l1_a,f_prime_l2_a = D_a(x_hat_y_a,y_a_prime).detach()
     
     #(x|y,y),(x_hat|y,y),(x_hat|y',y')
     d_a_1 = (r_l1_a,f_l1_a,f_prime_l1_a)
@@ -844,9 +910,6 @@ def train_step(X,Y,D_m,D_a, G, D_m_solver,D_a_solver, G_solver,batch_size=2,num_
     
     #using motion discriminator
     discriminator_type = 'm'
-    _,v_r,l_r,r_l1_m,r_l2_m = D_m(x_y,y_a,y_m).detach()
-    s_f_m,v_f,l_f,f_l1_m,f_l2_m = D_m(x_hat_y,y_a,y_m).detach()
-    s_f_prime_m,v_f_prime,l_f_prime,f_prime_l1_m,f_prime_l2_m = D_m(x_hat_y_m,y_a,y_m_prime)
     
     d_m_1 = (r_l1_m,f_l1_m,f_prime_l1_m)
     d_m_2 = (r_l2_m,f_l2_m,f_prime_l2_m)
@@ -882,7 +945,7 @@ def train(train_loader,batch_size,T,q,p,c,num_epochs,device):
     D_a_solver = optim.Adam(D_a.parameters(), lr=1e-3,betas=(0.5, 0.999))
 
     #initialize tensorboardX
-    writer = SummaryWriter('runs/exp-2')
+    writer = SummaryWriter('runs/exp-4')
     
     for epoch in range(num_epochs):  # TODO decide epochs
         print('-----------------Epoch = %d-----------------' % (epoch + 1))
@@ -925,10 +988,10 @@ def train(train_loader,batch_size,T,q,p,c,num_epochs,device):
             writer.add_scalar('d_m_loss', d_m_loss.item(), step)
             writer.add_scalar('d_a_loss', d_a_loss.item(), step)
             writer.add_scalar('d_m_loss_aux', d_m_loss_aux.item(), step)
-            writer.add_scalar('G_loss_a', G_loss_a.item(), step)
+            writer.add_scalar('G_loss_a', -G_loss_a.item(), step)
             writer.add_scalar('G_loss_aux', G_loss_aux.item(), step)
             writer.add_scalar('G_rank_loss_a', G_rank_loss_a.item(), step)
-            writer.add_scalar('G_loss_m', G_loss_m.item(), step)
+            writer.add_scalar('G_loss_m', -G_loss_m.item(), step)
             writer.add_scalar('G_rank_loss_m', G_rank_loss_m.item(), step)
 
 
