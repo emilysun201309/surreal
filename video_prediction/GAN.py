@@ -377,9 +377,10 @@ class Generator(nn.Module):
         t = F.sigmoid(q)
         y_v = t * q + (1-t)*q
         
+        #print("y_v", y_v.size(),y_v)        
         #TODO: check implementation of tiling
         y_v = y_v.view(N,-1,1,1,1).repeat(1,1,self.num_keypoints,8,8)
-        
+        #print("y_v tiled", y_v)
         #encoder
         e1 = self.encode1(y_a)
         e2 = self.encode2(e1)
@@ -394,14 +395,16 @@ class Generator(nn.Module):
         
         lstm_out,_ = self.lstm(y_v, initial_states)
         #lstm_out (N,T,256,8,8)
+        #print("lstm_out ", len(lstm_out))
         lstm_out = lstm_out[0]
+        #print("lstm_out layer1", lstm_out)
         
         #create random noise z
         #z = torch.rand((N,p))
         z = z.view(N,self.p,1,1).repeat(1,1,8,8)
         
         
-        decode_out = torch.zeros(N,T,3,64,64)
+        decode_out = torch.zeros(N,T,3,64,64).cuda()
         #decode each time step output
         for t in range(lstm_out.size()[1]):
             decode_out[:,t,:,:,:] = self.decode(lstm_out[:,t,:,:,:],z,e_out,(e1,e2,e3))
@@ -462,9 +465,9 @@ class Appearance_D(nn.Module):
         y_out = self.network1_l3(y_out) #(N,256,8,8)
         
         #print(y_out.size())
-        predictions = torch.zeros(N,T-3)
-        layer1_out = torch.zeros(N,T-3,64,32,32)
-        layer2_out = torch.zeros(N,T-3,128,16,16)
+        predictions = torch.zeros(N,T-3).cuda()
+        layer1_out = torch.zeros(N,T-3,64,32,32).cuda()
+        layer2_out = torch.zeros(N,T-3,128,16,16).cuda()
         for t in range(T-3):
             #x_temp (N,3,64,64)
             x_temp_1 = x[:,t,:,:,:]
@@ -570,7 +573,7 @@ class Motion_D(nn.Module):
         
         initial_states = []
         #TODO: check if initial cell state is 0?
-        initial_cell = Variable(torch.zeros_like(y_encoded))
+        initial_cell = Variable(torch.zeros_like(y_encoded)).cuda()
         initial_states.append((y_encoded,initial_cell))
         
         
@@ -607,7 +610,7 @@ class Motion_D(nn.Module):
         predict_out = F.sigmoid(predict)
         
         #predict keypoints 
-        keypoints = torch.zeros(N,T,self.q)
+        keypoints = torch.zeros(N,T,self.q).cuda()
         #decode each time step output
         for t in range(T):
             input_o = o[:,t,:,:,:]
@@ -755,17 +758,17 @@ def discriminator_loss_aux(y_m,y_m_prime,v_r,v_f,v_f_prime,l_r,l_f,l_f_prime):
     y_v = y_m['velocity']
     y_v_prime = y_m_prime['velocity']
     y_l = y_m['label']
-    print("y_l before",y_l)
+    #print("y_l before",y_l)
     #one_hot encode to scalar
     y_l = (y_l == 1).nonzero()[:,1]
-    print("y_l", y_l)
+    #print("y_l", y_l)
     
     LMSE = F.mse_loss(y_v,v_r) + F.mse_loss(y_v,v_f)+ F.mse_loss(y_v_prime,v_f_prime)
 
-    print("LMSE", LMSE)
+    #print("LMSE", LMSE)
     
     LCE = F.cross_entropy(l_r, y_l) + F.cross_entropy(l_f, y_l) + F.cross_entropy(l_f_prime, y_l)
-    print("LCE", LCE)
+    #print("LCE", LCE)
     
     return LMSE - LCE
     
@@ -784,8 +787,12 @@ def train_D_a(x_y,y_a,D_a,y_m,y_a_prime,x_hat_y,x_hat_y_a, D_a_solver):
     d_a_loss = -d_a_loss
     
     d_a_loss.backward()
+    D_a_bottom = D_a.network1_l1[0].weight.grad.mean()
+    D_a_top = D_a.fc[2].weight.grad.mean()
+    #print("D a bottom layer", D_a.network1_l1[0].weight.grad.mean()) 
+    #print("Da top layer",D_a.fc[2].weight.grad.mean())
     D_a_solver.step()
-    return d_a_loss
+    return d_a_loss,D_a_bottom,D_a_top
 
 
 def train_D_m(x_y,D_m,y_a,y_m,y_m_prime,x_hat_y,x_hat_y_m,D_m_solver):
@@ -805,13 +812,22 @@ def train_D_m(x_y,D_m,y_a,y_m,y_m_prime,x_hat_y,x_hat_y_m,D_m_solver):
     d_m_loss_sum = -d_m_loss + d_m_loss_aux
     
     d_m_loss_sum.backward()
+    D_m_bottom = D_m.encoder1[0].weight.grad.mean()
+    #print("D_m bottom layer",D_m.encoder1[0].weight.grad)
+    D_m_top_o = D_m.fc_o.weight.grad.mean()
+    D_m_top_y = D_m.fc_y.weight.grad.mean()
+    D_m_top_l = D_m.fc_h2.weight.grad.mean()
+
+    #print("D_m top layer o",D_m.fc_o.weight.grad)
+    #print("D_m top layer y",D_m.fc_y.weight.grad)
+    #print("D_m top layer l",D_m.fc_h2.weight.grad)
     D_m_solver.step()
-    return d_m_loss,d_m_loss_aux
+    return d_m_loss,d_m_loss_aux,D_m_bottom,D_m_top_o,D_m_top_y,D_m_top_l
 
 
 
 
-def train_step(X,Y,D_m,D_a, G, D_m_solver,D_a_solver, G_solver,batch_size=2,num_epochs=10,q=42,p=128):
+def train_step(X,Y,z,D_m,D_a, G, D_m_solver,D_a_solver, G_solver,batch_size=2,num_epochs=10,q=42,p=128):
     #X,Y = loader_train
     '''
     -D_m,D_a,G: models for discriminator and generator
@@ -827,7 +843,7 @@ def train_step(X,Y,D_m,D_a, G, D_m_solver,D_a_solver, G_solver,batch_size=2,num_
     x_y = X
     (y_a,y_m),(y_a_prime,_),(_,y_m_prime)=Y
     N = batch_size
-    z = torch.rand((N,p))  #3
+    #z = torch.rand((N,p))  #3
     
     x_hat_y = G(y_a,y_m,z).detach()
     x_hat_y_a = G(y_a_prime,y_m,z).detach()
@@ -835,8 +851,8 @@ def train_step(X,Y,D_m,D_a, G, D_m_solver,D_a_solver, G_solver,batch_size=2,num_
     #4
 
 
-    d_a_loss = train_D_a(x_y,y_a,D_a,y_m,y_a_prime,x_hat_y,x_hat_y_a, D_a_solver)
-    d_m_loss,d_m_loss_aux = train_D_m(x_y,D_m,y_a,y_m,y_m_prime,x_hat_y,x_hat_y_m,D_m_solver)
+    d_a_loss,D_a_bottom,D_a_top = train_D_a(x_y,y_a,D_a,y_m,y_a_prime,x_hat_y,x_hat_y_a, D_a_solver)
+    d_m_loss,d_m_loss_aux,D_m_bottom,D_m_top_o,D_m_top_y,D_m_top_l = train_D_m(x_y,D_m,y_a,y_m,y_m_prime,x_hat_y,x_hat_y_m,D_m_solver)
 
     '''
     #train discriminator a
@@ -929,9 +945,13 @@ def train_step(X,Y,D_m,D_a, G, D_m_solver,D_a_solver, G_solver,batch_size=2,num_
     #torch.clamp(0.0001-d1_neg+d1_pos,max=0) + torch.clamp(0.0001-d2_neg+d2_pos,max=0)
         
     G_loss.backward()
+    G_top = G.decode.conv10.weight.grad.mean()
+    G_bottom = G.encode1[0].weight.grad.mean()
+    #print("G top layer",G.decode.conv10.weight.grad)
+    #print("G bottom layer",G.encode1[0].weight.grad)
     G_solver.step()
     
-    return G_loss,d_m_loss,d_a_loss,d_m_loss_aux,G_loss_a,G_loss_aux,G_rank_loss_a,G_loss_m, G_rank_loss_m,x_hat_y
+    return G_loss,d_m_loss,d_a_loss,d_m_loss_aux,G_loss_a,G_loss_aux,G_rank_loss_a,G_loss_m, G_rank_loss_m,x_hat_y,G_top,G_bottom,D_a_bottom,D_a_top,D_m_bottom,D_m_top_o,D_m_top_y,D_m_top_l
     
     
 
@@ -945,18 +965,18 @@ def train(train_loader,batch_size,T,q,p,c,num_epochs,device):
     D_a_solver = optim.Adam(D_a.parameters(), lr=1e-3,betas=(0.5, 0.999))
 
     #initialize tensorboardX
-    writer = SummaryWriter('runs/exp-4')
-    
+    writer = SummaryWriter('runs/exp-8')
+    iteration = 0
     for epoch in range(num_epochs):  # TODO decide epochs
         print('-----------------Epoch = %d-----------------' % (epoch + 1))
         for step,(X,Y) in enumerate(train_loader):
             X = X.to(device)
-            X = X.permute(0,1,4,2,3)
-            X = X.type(torch.FloatTensor)
+            #X = X.permute(0,1,4,2,3)
+            #X = X.type(torch.FloatTensor)
             #Y = Y.to(device)
             y_a,y_m = Y
-            y_a = y_a.permute(0,3,1,2)
-            y_a = y_a.type(torch.FloatTensor)
+            #y_a = y_a.permute(0,3,1,2)
+            #y_a = y_a.type(torch.FloatTensor)
             y_m_l = y_m['label']
             y_m_l = y_m_l.type(torch.FloatTensor)
             y_m_v = y_m['velocity']
@@ -980,29 +1000,37 @@ def train(train_loader,batch_size,T,q,p,c,num_epochs,device):
             y_a_prime = y_a_prime.to(device)
             #y_m_prime = y_m_prime.to(device)
             Y = ((y_a,y_m),(y_a_prime,y_m),(y_a,y_m_prime))
-            
-            G_loss,d_m_loss,d_a_loss,d_m_loss_aux,G_loss_a,G_loss_aux,G_rank_loss_a,G_loss_m, G_rank_loss_m,x_hat_y = train_step(X,Y,D_m,D_a, G, D_m_solver,
+            z = torch.rand((batch_size,p)).to(device)
+            G_loss,d_m_loss,d_a_loss,d_m_loss_aux,G_loss_a,G_loss_aux,G_rank_loss_a,G_loss_m, G_rank_loss_m,x_hat_y,G_top,G_bottom,D_a_bottom,D_a_top,D_m_bottom,D_m_top_o,D_m_top_y,D_m_top_l = train_step(X,Y,z,D_m,D_a, G, D_m_solver,
                                                   D_a_solver, G_solver, batch_size,num_epochs,q,p)
             
-            writer.add_scalar('G_loss', G_loss.item(), step)
-            writer.add_scalar('d_m_loss', d_m_loss.item(), step)
-            writer.add_scalar('d_a_loss', d_a_loss.item(), step)
-            writer.add_scalar('d_m_loss_aux', d_m_loss_aux.item(), step)
-            writer.add_scalar('G_loss_a', -G_loss_a.item(), step)
-            writer.add_scalar('G_loss_aux', G_loss_aux.item(), step)
-            writer.add_scalar('G_rank_loss_a', G_rank_loss_a.item(), step)
-            writer.add_scalar('G_loss_m', -G_loss_m.item(), step)
-            writer.add_scalar('G_rank_loss_m', G_rank_loss_m.item(), step)
+            writer.add_scalar('G_loss', G_loss.item(), iteration)
+            writer.add_scalar('d_m_loss', d_m_loss.item(), iteration)
+            writer.add_scalar('d_a_loss', d_a_loss.item(), iteration)
+            writer.add_scalar('d_m_loss_aux', d_m_loss_aux.item(), iteration)
+            writer.add_scalar('G_loss_a', -G_loss_a.item(), iteration)
+            writer.add_scalar('G_loss_aux', G_loss_aux.item(), iteration)
+            writer.add_scalar('G_rank_loss_a', G_rank_loss_a.item(), iteration)
+            writer.add_scalar('G_loss_m', -G_loss_m.item(), iteration)
+            writer.add_scalar('G_rank_loss_m', G_rank_loss_m.item(), iteration)
+            writer.add_scalar("D a bottom layer", D_a_bottom.item(),iteration)
+            writer.add_scalar("D a top layer", D_a_top.item(),iteration)
+            writer.add_scalar("D m bottom layer", D_m_bottom.item(),iteration)
+            writer.add_scalar("D m top layer o", D_m_top_o.item(),iteration)
+            writer.add_scalar("D m top layer y", D_m_top_y.item(),iteration)
+            writer.add_scalar("D m top layer l", D_m_top_l.item(),iteration)
+            writer.add_scalar("G top layer l", G_top.item(),iteration)
+            writer.add_scalar("G bottom layer l", G_bottom.item(),iteration)
 
-
-            writer.add_image('X1.0', x_hat_y[0,0,:,:,:], step)
-            writer.add_image('X1.1', x_hat_y[0,5,:,:,:], step)
-            writer.add_image('X1.2', x_hat_y[0,10,:,:,:], step)
-            writer.add_image('X1.3', x_hat_y[0,15,:,:,:], step)
-            writer.add_image('X1.4', x_hat_y[0,20,:,:,:], step)
-            writer.add_image('X2', x_hat_y[2,1,:,:,:], step)
-            writer.add_image('X3', x_hat_y[3,1,:,:,:], step)
-            writer.add_image('X4', x_hat_y[4,1,:,:,:], step)
+            writer.add_image('X1.0', x_hat_y[0,0,:,:,:], iteration)
+            writer.add_image('X1.1', x_hat_y[0,5,:,:,:], iteration)
+            writer.add_image('X1.2', x_hat_y[0,10,:,:,:], iteration)
+            writer.add_image('X1.3', x_hat_y[0,15,:,:,:], iteration)
+            writer.add_image('X1.4', x_hat_y[0,20,:,:,:], iteration)
+            writer.add_image('X2', x_hat_y[1,1,:,:,:], iteration)
+            writer.add_image('X3', x_hat_y[1,10,:,:,:], iteration)
+            writer.add_image('X4', x_hat_y[1,15,:,:,:], iteration)
+            iteration +=1
             if(step%1==0):
                 print("step%d G_loss%.3f d_m_loss%.3f d_a_loss%.3f d_m_loss_aux%.3f G_loss_a%.3f G_loss_aux%.3f G_rank_loss_a%.3f G_loss_m%.3f" %(step,G_loss.item(),d_m_loss.item(),
                                                                      d_a_loss.item(),d_m_loss_aux.item(),G_loss_a.item(), G_loss_aux.item(),G_rank_loss_a.item(),G_loss_m.item()))
@@ -1010,10 +1038,10 @@ def train(train_loader,batch_size,T,q,p,c,num_epochs,device):
 
 def main():
     dset_train = NATOPSData("videos/reshaped.hdf5","natops/data/segmentation.txt","keypoints.h5")
-    train_loader = DataLoader(dset_train, batch_size=10, shuffle=True, num_workers=1)
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    train_loader = DataLoader(dset_train, batch_size=2, shuffle=True, num_workers=1)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
-    train(train_loader,batch_size=10,T=30,q=42,p=128,c=24,num_epochs=10,device="cpu")
+    train(train_loader,batch_size=2,T=30,q=42,p=128,c=24,num_epochs=10,device=device)
 if __name__ == '__main__':
     main()
 
