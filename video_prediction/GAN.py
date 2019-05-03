@@ -8,6 +8,14 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from dataloader import NATOPSData
 from tensorboardX import SummaryWriter
+import os
+
+SAVE_STEP = 3000
+G_PATH = './models-3/generator-9-3000.ckpt'
+D_A_PATH = './models-3/discriminator_a-9-3000.ckpt'
+D_M_PATH = './models-3/discriminator_m-9-3000.ckpt'
+LOAD_FROM_CHECKPOINT = False
+MODEL_DIR = 'models-9/'
 
 class Encoder(nn.Module):
 
@@ -373,9 +381,14 @@ class Generator(nn.Module):
         #y_a (N,3,64,64)
         
         #tile y_v
+        '''
         q = self.fc_q(y_v)
         t = F.sigmoid(q)
         y_v = t * q + (1-t)*q
+        '''
+
+        q = self.fc_q(y_v)
+        y_v = F.sigmoid(q)
         
         #print("y_v", y_v.size(),y_v)        
         #TODO: check implementation of tiling
@@ -764,19 +777,18 @@ def discriminator_loss_aux(y_m,y_m_prime,v_r,v_f,v_f_prime,l_r,l_f,l_f_prime):
     #print("y_l", y_l)
     
     LMSE = F.mse_loss(y_v,v_r) + F.mse_loss(y_v,v_f)+ F.mse_loss(y_v_prime,v_f_prime)
+    LMSE = 30*LMSE
 
     #print("LMSE", LMSE)
     
     LCE = F.cross_entropy(l_r, y_l) + F.cross_entropy(l_f, y_l) + F.cross_entropy(l_f_prime, y_l)
+    LCE = 0.03*LCE
     #print("LCE", LCE)
     
-    return LMSE - LCE
+    return LMSE + LCE
     
 
 def train_D_a(x_y,y_a,D_a,y_m,y_a_prime,x_hat_y,x_hat_y_a, D_a_solver):
-    #train discriminator a
-    for param in D_a.parameters():
-        param.requires_grad = True
     D_a_solver.zero_grad()
     s_r_a,r_l1_a,r_l2_a = D_a(x_y,y_a)
     s_f_a,f_l1_a,f_l2_a = D_a(x_hat_y,y_a)
@@ -786,18 +798,16 @@ def train_D_a(x_y,y_a,D_a,y_m,y_a_prime,x_hat_y,x_hat_y_a, D_a_solver):
     d_a_loss = discriminator_loss(s_r_a,s_m_a,s_f_a,s_f_prime_a)
     d_a_loss = -d_a_loss
     
-    d_a_loss.backward()
-    D_a_bottom = D_a.network1_l1[0].weight.grad.mean()
-    D_a_top = D_a.fc[2].weight.grad.mean()
+    d_a_loss.backward(retain_graph=True)
+    #D_a_bottom = D_a.network1_l1[0].weight.grad.mean()
+    #D_a_top = D_a.fc[2].weight.grad.mean()
     #print("D a bottom layer", D_a.network1_l1[0].weight.grad.mean()) 
     #print("Da top layer",D_a.fc[2].weight.grad.mean())
     D_a_solver.step()
-    return d_a_loss,D_a_bottom,D_a_top
+    return d_a_loss
 
 
 def train_D_m(x_y,D_m,y_a,y_m,y_m_prime,x_hat_y,x_hat_y_m,D_m_solver):
-    for param in D_m.parameters():
-        param.requires_grad = True
     D_m_solver.zero_grad()
     s_r_m,v_r,l_r,r_l1_m,r_l2_m = D_m(x_y,y_a,y_m)
     s_f_m,v_f,l_f,f_l1_m,f_l2_m = D_m(x_hat_y,y_a,y_m)
@@ -806,28 +816,28 @@ def train_D_m(x_y,D_m,y_a,y_m,y_m_prime,x_hat_y,x_hat_y_m,D_m_solver):
     
     d_m_loss = discriminator_loss(s_r_m,s_m_m,s_f_m,s_f_prime_m)
     
-    d_m_loss_aux = discriminator_loss_aux(y_m,y_m_prime,v_r,v_f,v_f_prime,l_r,l_f,l_f_prime)
+    #d_m_loss_aux = discriminator_loss_aux(y_m,y_m_prime,v_r,v_f,v_f_prime,l_r,l_f,l_f_prime)
     
     #TODO:verify '-' in paper
-    d_m_loss_sum = -d_m_loss + d_m_loss_aux
+    d_m_loss_sum = -d_m_loss
     
-    d_m_loss_sum.backward()
-    D_m_bottom = D_m.encoder1[0].weight.grad.mean()
+    d_m_loss_sum.backward(retain_graph=True)
+    #D_m_bottom = D_m.encoder1[0].weight.grad.mean()
     #print("D_m bottom layer",D_m.encoder1[0].weight.grad)
-    D_m_top_o = D_m.fc_o.weight.grad.mean()
-    D_m_top_y = D_m.fc_y.weight.grad.mean()
-    D_m_top_l = D_m.fc_h2.weight.grad.mean()
+    #D_m_top_o = D_m.fc_o.weight.grad.mean()
+    #D_m_top_y = D_m.fc_y.weight.grad.mean()
+    #D_m_top_l = D_m.fc_h2.weight.grad.mean()
 
     #print("D_m top layer o",D_m.fc_o.weight.grad)
     #print("D_m top layer y",D_m.fc_y.weight.grad)
     #print("D_m top layer l",D_m.fc_h2.weight.grad)
     D_m_solver.step()
-    return d_m_loss,d_m_loss_aux,D_m_bottom,D_m_top_o,D_m_top_y,D_m_top_l
+    return d_m_loss
 
 
 
 
-def train_step(X,Y,z,D_m,D_a, G, D_m_solver,D_a_solver, G_solver,batch_size=2,num_epochs=10,q=42,p=128):
+def train_step(X,Y,z,D_m,D_a, G, D_m_solver,D_a_solver, G_solver,epoch,step,batch_size=2,q=42,p=128):
     #X,Y = loader_train
     '''
     -D_m,D_a,G: models for discriminator and generator
@@ -851,10 +861,9 @@ def train_step(X,Y,z,D_m,D_a, G, D_m_solver,D_a_solver, G_solver,batch_size=2,nu
     #4
 
 
-    d_a_loss,D_a_bottom,D_a_top = train_D_a(x_y,y_a,D_a,y_m,y_a_prime,x_hat_y,x_hat_y_a, D_a_solver)
-    d_m_loss,d_m_loss_aux,D_m_bottom,D_m_top_o,D_m_top_y,D_m_top_l = train_D_m(x_y,D_m,y_a,y_m,y_m_prime,x_hat_y,x_hat_y_m,D_m_solver)
+    #d_a_loss = train_D_a(x_y,y_a,D_a,y_m,y_a_prime,x_hat_y,x_hat_y_a, D_a_solver)
+    #d_m_loss = train_D_m(x_y,D_m,y_a,y_m,y_m_prime,x_hat_y,x_hat_y_m,D_m_solver)
 
-    '''
     #train discriminator a
     D_a_solver.zero_grad()
     s_r_a,r_l1_a,r_l2_a = D_a(x_y,y_a)
@@ -862,9 +871,9 @@ def train_step(X,Y,z,D_m,D_a, G, D_m_solver,D_a_solver, G_solver,batch_size=2,nu
     s_m_a,_,_ = D_a(x_y,y_a_prime)
     s_f_prime_a,f_prime_l1_a,f_prime_l2_a = D_a(x_hat_y_a,y_a_prime)
     
-    d_a_loss = discriminator_loss(s_r_a,s_m_a,s_f_a,s_f_prime_a)
+    d_a_loss = -discriminator_loss(s_r_a,s_m_a,s_f_a,s_f_prime_a)
     
-    d_a_loss.backward(retain_graph=True)
+    d_a_loss.backward()
     D_a_solver.step()
     #TODO:verify Daux is not needed for D_a
     
@@ -876,82 +885,74 @@ def train_step(X,Y,z,D_m,D_a, G, D_m_solver,D_a_solver, G_solver,batch_size=2,nu
     s_m_m,v_m,l_m,_,_ = D_m(x_y,y_a,y_m_prime)
     s_f_prime_m,v_f_prime,l_f_prime,f_prime_l1_m,f_prime_l2_m = D_m(x_hat_y_m,y_a,y_m_prime)
     
-    d_m_loss = discriminator_loss(s_r_m,s_m_m,s_f_m,s_f_prime_m)
+    d_m_loss = -discriminator_loss(s_r_m,s_m_m,s_f_m,s_f_prime_m)
     
     d_m_loss_aux = discriminator_loss_aux(y_m,y_m_prime,v_r,v_f,v_f_prime,l_r,l_f,l_f_prime)
+    d_m_loss += d_m_loss_aux
     
     #TODO:verify '-' in paper
-    d_m_loss_sum = d_m_loss + d_m_loss_aux
     
-    d_m_loss_sum.backward(retain_graph=True)
+    d_m_loss.backward()
     D_m_solver.step()
-    '''
     
     #generator loss 
     G_solver.zero_grad()
-    #x_y
+    
     x_hat_y = G(y_a,y_m,z)
     x_hat_y_a = G(y_a_prime,y_m,z)
     x_hat_y_m = G(y_a,y_m_prime,z)
     
-    for param in D_a.parameters():
-        param.requires_grad = False
-
-
-    s_r_a,r_l1_a,r_l2_a = D_a(x_y,y_a)
     s_f_a,f_l1_a,f_l2_a = D_a(x_hat_y,y_a)
     s_f_prime_a,f_prime_l1_a,f_prime_l2_a = D_a(x_hat_y_a,y_a_prime)
-
-    for param in D_m.parameters():
-        param.requires_grad = False
-
-    s_r_m,v_r,l_r,r_l1_m,r_l2_m = D_m(x_y,y_a,y_m)
     s_f_m,v_f,l_f,f_l1_m,f_l2_m = D_m(x_hat_y,y_a,y_m)
     s_f_prime_m,v_f_prime,l_f_prime,f_prime_l1_m,f_prime_l2_m = D_m(x_hat_y_m,y_a,y_m_prime)
-    
     #using appearance discriminator
     discriminator_type = 'a'
     
     #(x|y,y),(x_hat|y,y),(x_hat|y',y')
-    d_a_1 = (r_l1_a,f_l1_a,f_prime_l1_a)
-    d_a_2 = (r_l2_a,f_l2_a,f_prime_l2_a)
-    d1_pos_a, d1_neg_a,d2_pos_a,d2_neg_a = ranking_loss(discriminator_type,None,None,d_a_1,d_a_2)
+    #d_a_1 = (r_l1_a,f_l1_a,f_prime_l1_a)
+    #d_a_2 = (r_l2_a,f_l2_a,f_prime_l2_a)
+    #d1_pos_a, d1_neg_a,d2_pos_a,d2_neg_a = ranking_loss(discriminator_type,None,None,d_a_1,d_a_2)
     
     G_loss_a = s_f_a.log() + s_f_prime_a.log()
-    G_loss_a = G_loss_a.mean()
-    G_loss_aux = F.l1_loss(x_hat_y[1:],x_y[1:]) + d1_pos_a+d2_pos_a
+    #G_loss_a = G_loss_a.mean()
+    G_loss_aux = 3*F.l1_loss(x_hat_y,x_y)
     
-    G_rank_loss_a = torch.clamp(0.01-d1_neg_a+d1_pos_a,max=0) + torch.clamp(0.01-d2_neg_a+d2_pos_a,max=0)
+    #G_rank_loss_a = torch.clamp(0.01-d1_neg_a+d1_pos_a,max=0) + torch.clamp(0.01-d2_neg_a+d2_pos_a,max=0)
     
     
     #using motion discriminator
     discriminator_type = 'm'
-    
-    d_m_1 = (r_l1_m,f_l1_m,f_prime_l1_m)
-    d_m_2 = (r_l2_m,f_l2_m,f_prime_l2_m)
-    d1_pos_m, d1_neg_m,d2_pos_m,d2_neg_m = ranking_loss(discriminator_type,d_m_1,d_m_2,None,None)
 
     G_loss_m = s_f_m.log() + s_f_prime_m.log()
-    G_loss_m = G_loss_m.mean()
+    #G_loss_m = G_loss_m.mean()
+    #G_loss_m = 3*G_loss_m
     
-    G_loss_aux += (d1_pos_m + d2_pos_m)
+    #G_loss_aux += (d1_pos_m + d2_pos_m)
 
-    G_rank_loss_m = torch.clamp(0.001-d1_neg_m+d1_pos_m,max=0) + torch.clamp(0.001-d2_neg_m+d2_pos_m,max=0)
+    #G_rank_loss_m = torch.clamp(0.001-d1_neg_m+d1_pos_m,max=0) + torch.clamp(0.001-d2_neg_m+d2_pos_m,max=0)
 
     
-    G_loss = -(G_loss_a + G_loss_m - G_loss_aux - G_rank_loss_a - G_rank_loss_m)
+    G_loss = -(G_loss_a + G_loss_m - G_loss_aux)
 
     
     #torch.clamp(0.0001-d1_neg+d1_pos,max=0) + torch.clamp(0.0001-d2_neg+d2_pos,max=0)
         
     G_loss.backward()
-    G_top = G.decode.conv10.weight.grad.mean()
-    G_bottom = G.encode1[0].weight.grad.mean()
     #print("G top layer",G.decode.conv10.weight.grad)
     #print("G bottom layer",G.encode1[0].weight.grad)
     G_solver.step()
+
+    if (step + 1) % SAVE_STEP == 0:
+        torch.save(G.state_dict(), os.path.join(
+            MODEL_DIR, 'generator-{}-{}.ckpt'.format(epoch + 1, step + 1)))
+        torch.save(D_a.state_dict(), os.path.join(
+            MODEL_DIR, 'discriminator_a-{}-{}.ckpt'.format(epoch + 1, step + 1)))
+        torch.save(D_m.state_dict(), os.path.join(
+            MODEL_DIR, 'discriminator_m-{}-{}.ckpt'.format(epoch + 1, step + 1)))
+
     
-    return G_loss,d_m_loss,d_a_loss,d_m_loss_aux,G_loss_a,G_loss_aux,G_rank_loss_a,G_loss_m, G_rank_loss_m,x_hat_y,G_top,G_bottom,D_a_bottom,D_a_top,D_m_bottom,D_m_top_o,D_m_top_y,D_m_top_l
+    return G_loss,d_m_loss,d_a_loss,G_loss_a,G_loss_aux,G_loss_m,d_m_loss_aux,x_hat_y
     
     
 
@@ -964,8 +965,13 @@ def train(train_loader,batch_size,T,q,p,c,num_epochs,device):
     D_m_solver = optim.Adam(D_m.parameters(), lr=1e-3,betas=(0.5, 0.999))
     D_a_solver = optim.Adam(D_a.parameters(), lr=1e-3,betas=(0.5, 0.999))
 
+    if LOAD_FROM_CHECKPOINT:
+        G.load_state_dict(torch.load(G_PATH))
+        D_a.load_state_dict(torch.load(D_A_PATH))
+        D_m.load_state_dict(torch.load(D_M_PATH))
+
     #initialize tensorboardX
-    writer = SummaryWriter('runs/exp-8')
+    writer = SummaryWriter('runs/exp-13')
     iteration = 0
     for epoch in range(num_epochs):  # TODO decide epochs
         print('-----------------Epoch = %d-----------------' % (epoch + 1))
@@ -1001,8 +1007,8 @@ def train(train_loader,batch_size,T,q,p,c,num_epochs,device):
             #y_m_prime = y_m_prime.to(device)
             Y = ((y_a,y_m),(y_a_prime,y_m),(y_a,y_m_prime))
             z = torch.rand((batch_size,p)).to(device)
-            G_loss,d_m_loss,d_a_loss,d_m_loss_aux,G_loss_a,G_loss_aux,G_rank_loss_a,G_loss_m, G_rank_loss_m,x_hat_y,G_top,G_bottom,D_a_bottom,D_a_top,D_m_bottom,D_m_top_o,D_m_top_y,D_m_top_l = train_step(X,Y,z,D_m,D_a, G, D_m_solver,
-                                                  D_a_solver, G_solver, batch_size,num_epochs,q,p)
+            G_loss,d_m_loss,d_a_loss,G_loss_a,G_loss_aux,G_loss_m,d_m_loss_aux,x_hat_y = train_step(X,Y,z,D_m,D_a, G, D_m_solver,
+                                                  D_a_solver, G_solver,epoch,step, batch_size,q,p)
             
             writer.add_scalar('G_loss', G_loss.item(), iteration)
             writer.add_scalar('d_m_loss', d_m_loss.item(), iteration)
@@ -1010,17 +1016,17 @@ def train(train_loader,batch_size,T,q,p,c,num_epochs,device):
             writer.add_scalar('d_m_loss_aux', d_m_loss_aux.item(), iteration)
             writer.add_scalar('G_loss_a', -G_loss_a.item(), iteration)
             writer.add_scalar('G_loss_aux', G_loss_aux.item(), iteration)
-            writer.add_scalar('G_rank_loss_a', G_rank_loss_a.item(), iteration)
+            #writer.add_scalar('G_rank_loss_a', G_rank_loss_a.item(), iteration)
             writer.add_scalar('G_loss_m', -G_loss_m.item(), iteration)
-            writer.add_scalar('G_rank_loss_m', G_rank_loss_m.item(), iteration)
-            writer.add_scalar("D a bottom layer", D_a_bottom.item(),iteration)
-            writer.add_scalar("D a top layer", D_a_top.item(),iteration)
-            writer.add_scalar("D m bottom layer", D_m_bottom.item(),iteration)
-            writer.add_scalar("D m top layer o", D_m_top_o.item(),iteration)
-            writer.add_scalar("D m top layer y", D_m_top_y.item(),iteration)
-            writer.add_scalar("D m top layer l", D_m_top_l.item(),iteration)
-            writer.add_scalar("G top layer l", G_top.item(),iteration)
-            writer.add_scalar("G bottom layer l", G_bottom.item(),iteration)
+            #writer.add_scalar('G_rank_loss_m', G_rank_loss_m.item(), iteration)
+            #writer.add_scalar("D a bottom layer", D_a_bottom.item(),iteration)
+            #writer.add_scalar("D a top layer", D_a_top.item(),iteration)
+            #writer.add_scalar("D m bottom layer", D_m_bottom.item(),iteration)
+            #writer.add_scalar("D m top layer o", D_m_top_o.item(),iteration)
+            #writer.add_scalar("D m top layer y", D_m_top_y.item(),iteration)
+            #writer.add_scalar("D m top layer l", D_m_top_l.item(),iteration)
+            #writer.add_scalar("G top layer l", G_top.item(),iteration)
+            #writer.add_scalar("G bottom layer l", G_bottom.item(),iteration)
 
             writer.add_image('X1.0', x_hat_y[0,0,:,:,:], iteration)
             writer.add_image('X1.1', x_hat_y[0,5,:,:,:], iteration)
@@ -1032,16 +1038,14 @@ def train(train_loader,batch_size,T,q,p,c,num_epochs,device):
             writer.add_image('X4', x_hat_y[1,15,:,:,:], iteration)
             iteration +=1
             if(step%1==0):
-                print("step%d G_loss%.3f d_m_loss%.3f d_a_loss%.3f d_m_loss_aux%.3f G_loss_a%.3f G_loss_aux%.3f G_rank_loss_a%.3f G_loss_m%.3f" %(step,G_loss.item(),d_m_loss.item(),
-                                                                     d_a_loss.item(),d_m_loss_aux.item(),G_loss_a.item(), G_loss_aux.item(),G_rank_loss_a.item(),G_loss_m.item()))
-            
+                print("step%d G_loss%.3f d_m_loss%.3f d_a_loss%.3f" %(step,G_loss.item(),d_m_loss.item(),d_a_loss.item()))
 
 def main():
     dset_train = NATOPSData("videos/reshaped.hdf5","natops/data/segmentation.txt","keypoints.h5")
-    train_loader = DataLoader(dset_train, batch_size=2, shuffle=True, num_workers=1)
+    train_loader = DataLoader(dset_train, batch_size=3, shuffle=True, num_workers=1)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
-    train(train_loader,batch_size=2,T=30,q=42,p=128,c=24,num_epochs=10,device=device)
+    train(train_loader,batch_size=3,T=30,q=42,p=128,c=24,num_epochs=40,device=device)
 if __name__ == '__main__':
     main()
 
